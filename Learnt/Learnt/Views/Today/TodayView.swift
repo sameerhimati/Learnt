@@ -13,6 +13,7 @@ struct TodayView: View {
     @State private var selectedDate = Date()
     @State private var showCalendar = false
     @State private var showInput = false
+    @State private var showVoiceInput = false
     @State private var editingEntry: LearningEntry?
 
     private var entryStore: EntryStore {
@@ -95,22 +96,40 @@ struct TodayView: View {
             )
         }
         .sheet(isPresented: $showInput) {
-            InputPlaceholderView(
+            InputView(
                 onSave: { content in
                     entryStore.createEntry(content: content, for: selectedDate)
                     showInput = false
                 },
-                onCancel: { showInput = false }
+                onCancel: { showInput = false },
+                onStartVoice: {
+                    showInput = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showVoiceInput = true
+                    }
+                }
             )
         }
         .sheet(item: $editingEntry) { entry in
-            InputPlaceholderView(
+            InputView(
                 initialContent: entry.content,
                 onSave: { content in
                     entryStore.updateEntry(entry, content: content)
                     editingEntry = nil
                 },
-                onCancel: { editingEntry = nil }
+                onCancel: { editingEntry = nil },
+                onStartVoice: {
+                    // Voice input not available in edit mode for now
+                }
+            )
+        }
+        .sheet(isPresented: $showVoiceInput) {
+            VoiceInputView(
+                onSave: { content in
+                    entryStore.createEntry(content: content, for: selectedDate)
+                    showVoiceInput = false
+                },
+                onCancel: { showVoiceInput = false }
             )
         }
     }
@@ -201,45 +220,6 @@ struct TodayView: View {
             .joined(separator: "\n")
 
         return "\(header)\n\n\(bullets)"
-    }
-}
-
-// MARK: - Input Placeholder (temporary until input modal is built)
-
-private struct InputPlaceholderView: View {
-    var initialContent: String = ""
-    let onSave: (String) -> Void
-    let onCancel: () -> Void
-
-    @State private var content: String = ""
-
-    var body: some View {
-        NavigationStack {
-            VStack {
-                TextEditor(text: $content)
-                    .font(.system(.body, design: .serif))
-                    .padding()
-
-                Spacer()
-            }
-            .background(Color.appBackgroundColor)
-            .navigationTitle(initialContent.isEmpty ? "New Learning" : "Edit")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSave(content)
-                    }
-                    .disabled(content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-            .onAppear {
-                content = initialContent
-            }
-        }
     }
 }
 
