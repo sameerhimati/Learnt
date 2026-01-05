@@ -9,26 +9,26 @@ struct MainTabView: View {
     @State private var selectedTab = 1  // Start on Today (center)
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            InsightsView()
-                .tabItem {
-                    Label("Insights", systemImage: "chart.line.uptrend.xyaxis")
+        ZStack(alignment: .bottom) {
+            // Content
+            Group {
+                switch selectedTab {
+                case 0:
+                    InsightsView()
+                case 1:
+                    TodayView()
+                case 2:
+                    ProfileView()
+                default:
+                    TodayView()
                 }
-                .tag(0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            TodayView()
-                .tabItem {
-                    Label("Today", systemImage: "sun.max")
-                }
-                .tag(1)
-
-            ProfileView()
-                .tabItem {
-                    Label("You", systemImage: "person")
-                }
-                .tag(2)
+            // Custom Tab Bar
+            CustomTabBar(selectedTab: $selectedTab)
         }
-        .tint(Color.primaryTextColor)
+        .ignoresSafeArea(.keyboard)
     }
 }
 

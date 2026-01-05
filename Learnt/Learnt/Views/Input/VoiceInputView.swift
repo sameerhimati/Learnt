@@ -6,14 +6,20 @@
 import SwiftUI
 
 struct VoiceInputView: View {
-    let onSave: (String) -> Void
+    let onSave: (String, Data?) -> Void
     let onCancel: () -> Void
 
     @State private var speechService = SpeechService()
     @State private var pulseAnimation = false
+    @State private var keepAudio = false
+    @AppStorage("alwaysSaveAudio") private var alwaysSaveAudio = false
 
     private var canSave: Bool {
         !speechService.transcribedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var hasFinishedRecording: Bool {
+        !speechService.isRecording && !speechService.transcribedText.isEmpty
     }
 
     var body: some View {
@@ -28,11 +34,17 @@ struct VoiceInputView: View {
                 // Transcribed text area
                 transcriptionArea
 
+                // Keep audio toggle (shows after recording)
+                if hasFinishedRecording && speechService.recordedAudioData != nil {
+                    keepAudioToggle
+                }
+
                 // Visual feedback and controls
                 controlsArea
             }
         }
         .onAppear {
+            keepAudio = alwaysSaveAudio
             speechService.startRecording()
         }
         .onDisappear {
@@ -59,10 +71,7 @@ struct VoiceInputView: View {
 
             Spacer()
 
-            Button(action: {
-                speechService.stopRecording()
-                onSave(speechService.transcribedText)
-            }) {
+            Button(action: saveEntry) {
                 Text("Save")
                     .font(.system(.body, design: .serif, weight: .medium))
                     .foregroundStyle(canSave ? Color.primaryTextColor : Color.secondaryTextColor)
@@ -105,6 +114,31 @@ struct VoiceInputView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxHeight: .infinity)
+    }
+
+    // MARK: - Keep Audio Toggle
+
+    private var keepAudioToggle: some View {
+        HStack {
+            Image(systemName: keepAudio ? "waveform.circle.fill" : "waveform.circle")
+                .font(.system(size: 20))
+                .foregroundStyle(keepAudio ? Color.primaryTextColor : Color.secondaryTextColor)
+
+            Text("Keep audio")
+                .font(.system(.body, design: .serif))
+                .foregroundStyle(Color.primaryTextColor)
+
+            Spacer()
+
+            Toggle("", isOn: $keepAudio)
+                .labelsHidden()
+                .tint(Color.primaryTextColor)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.inputBackgroundColor)
+        .cornerRadius(12)
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Controls Area
@@ -157,11 +191,21 @@ struct VoiceInputView: View {
             }
 
             // Status text
-            Text(speechService.isRecording ? "Tap to stop" : "Tap to record")
+            Text(statusText)
                 .font(.system(.caption, design: .serif))
                 .foregroundStyle(Color.secondaryTextColor)
         }
         .padding(.vertical, 32)
+    }
+
+    private var statusText: String {
+        if speechService.isRecording {
+            return "Tap to stop"
+        } else if hasFinishedRecording {
+            return "Tap to record more"
+        } else {
+            return "Tap to record"
+        }
     }
 
     // MARK: - Actions
@@ -173,11 +217,17 @@ struct VoiceInputView: View {
             speechService.startRecording()
         }
     }
+
+    private func saveEntry() {
+        speechService.stopRecording()
+        let audioData = keepAudio ? speechService.recordedAudioData : nil
+        onSave(speechService.transcribedText, audioData)
+    }
 }
 
 #Preview {
     VoiceInputView(
-        onSave: { _ in },
+        onSave: { _, _ in },
         onCancel: {}
     )
 }

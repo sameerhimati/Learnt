@@ -14,6 +14,7 @@ struct TodayView: View {
     @State private var showCalendar = false
     @State private var showInput = false
     @State private var showVoiceInput = false
+    @State private var showShareSheet = false
     @State private var editingEntry: LearningEntry?
 
     private var entryStore: EntryStore {
@@ -125,12 +126,20 @@ struct TodayView: View {
         }
         .sheet(isPresented: $showVoiceInput) {
             VoiceInputView(
-                onSave: { content in
-                    entryStore.createEntry(content: content, for: selectedDate)
+                onSave: { content, audioData in
+                    entryStore.createEntry(
+                        content: content,
+                        for: selectedDate,
+                        isVoiceEntry: true,
+                        audioData: audioData
+                    )
                     showVoiceInput = false
                 },
                 onCancel: { showVoiceInput = false }
             )
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheetView(initialDate: selectedDate)
         }
     }
 
@@ -152,13 +161,14 @@ struct TodayView: View {
                 }
                 .buttonStyle(.plain)
 
-                ShareLink(item: shareText) {
+                Button(action: { showShareSheet = true }) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 20))
                         .foregroundStyle(entriesForSelectedDate.isEmpty
                             ? Color.secondaryTextColor
                             : Color.primaryTextColor)
                 }
+                .buttonStyle(.plain)
                 .disabled(entriesForSelectedDate.isEmpty)
             }
         }
@@ -209,18 +219,6 @@ struct TodayView: View {
         }
     }
 
-    // MARK: - Share
-
-    private var shareText: String {
-        guard !entriesForSelectedDate.isEmpty else { return "" }
-
-        let header = "What I learned on \(selectedDate.formattedFull):"
-        let bullets = entriesForSelectedDate
-            .map { "• \($0.content)" }
-            .joined(separator: "\n")
-
-        return "\(header)\n\n\(bullets)"
-    }
 }
 
 #Preview {

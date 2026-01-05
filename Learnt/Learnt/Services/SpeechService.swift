@@ -13,11 +13,16 @@ final class SpeechService {
     var isRecording: Bool = false
     var isAuthorized: Bool = false
     var errorMessage: String?
+    var recordedAudioData: Data?
 
     private var audioEngine: AVAudioEngine?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+
+    // Audio recording
+    private var audioFile: AVAudioFile?
+    private var audioFileURL: URL?
 
     init() {
         checkAuthorization()
@@ -57,6 +62,7 @@ final class SpeechService {
         // Reset state
         transcribedText = ""
         errorMessage = nil
+        recordedAudioData = nil
 
         // Configure audio session
         let audioSession = AVAudioSession.sharedInstance()
@@ -88,8 +94,13 @@ final class SpeechService {
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
 
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+        // Setup audio file for recording
+        setupAudioFile(format: recordingFormat)
+
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
             recognitionRequest.append(buffer)
+            // Also write to audio file
+            self?.writeToAudioFile(buffer: buffer)
         }
 
         audioEngine.prepare()
@@ -122,6 +133,9 @@ final class SpeechService {
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
 
+        // Finalize audio file and load data
+        finalizeAudioFile()
+
         audioEngine = nil
         recognitionRequest = nil
         recognitionTask = nil
@@ -130,5 +144,64 @@ final class SpeechService {
 
         // Deactivate audio session
         try? AVAudioSession.sharedInstance().setActive(false)
+    }
+
+    // MARK: - Audio File Management
+
+    private func setupAudioFile(format: AVAudioFormat) {
+        let tempDir = FileManager.default.temporaryDirectory
+        audioFileURL = tempDir.appendingPathComponent("voice_recording_\(UUID().uuidString).m4a")
+
+        guard let url = audioFileURL else { return }
+
+        // Create audio file with AAC format for smaller size
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: format.sampleRate,
+            AVNumberOfChannelsKey: format.channelCount,
+            AVEncoderAudioQualityKey: AVAudioQuality.medium.rawValue
+        ]
+
+        do {
+            audioFile = try AVAudioFile(forWriting: url, settings: settings)
+        } catch {
+            // If AAC fails, try with the original format
+            do {
+                audioFile = try AVAudioFile(forWriting: url, settings: format.settings)
+            } catch {
+                print("Failed to create audio file: \(error)")
+                audioFile = nil
+            }
+        }
+    }
+
+    private func writeToAudioFile(buffer: AVAudioPCMBuffer) {
+        guard let audioFile = audioFile else { return }
+        do {
+            try audioFile.write(from: buffer)
+        } catch {
+            // Silently fail - transcription still works
+        }
+    }
+
+    private func finalizeAudioFile() {
+        audioFile = nil
+
+        guard let url = audioFileURL else { return }
+
+        // Load the audio data
+        do {
+            recordedAudioData = try Data(contentsOf: url)
+        } catch {
+            print("Failed to load audio data: \(error)")
+        }
+
+        // Clean up temp file
+        try? FileManager.default.removeItem(at: url)
+        audioFileURL = nil
+    }
+
+    func clearAudioData() {
+        recordedAudioData = nil
     }
 }

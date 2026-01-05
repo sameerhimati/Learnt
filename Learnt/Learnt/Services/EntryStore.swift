@@ -68,7 +68,7 @@ final class EntryStore {
 
     // MARK: - Create
 
-    func createEntry(content: String, for date: Date, isVoiceEntry: Bool = false) {
+    func createEntry(content: String, for date: Date, isVoiceEntry: Bool = false, audioData: Data? = nil) {
         let existingEntries = entries(for: date)
         let sortOrder = existingEntries.count
 
@@ -76,7 +76,8 @@ final class EntryStore {
             content: content,
             date: date,
             isVoiceEntry: isVoiceEntry,
-            sortOrder: sortOrder
+            sortOrder: sortOrder,
+            audioData: audioData
         )
         modelContext.insert(entry)
         save()

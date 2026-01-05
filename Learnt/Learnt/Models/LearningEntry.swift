@@ -15,12 +15,14 @@ final class LearningEntry {
     var updatedAt: Date
     var isVoiceEntry: Bool
     var sortOrder: Int
+    @Attribute(.externalStorage) var audioData: Data?
 
     init(
         content: String,
         date: Date = Date(),
         isVoiceEntry: Bool = false,
-        sortOrder: Int = 0
+        sortOrder: Int = 0,
+        audioData: Data? = nil
     ) {
         self.id = UUID()
         self.content = content
@@ -29,6 +31,11 @@ final class LearningEntry {
         self.updatedAt = Date()
         self.isVoiceEntry = isVoiceEntry
         self.sortOrder = sortOrder
+        self.audioData = audioData
+    }
+
+    var hasAudio: Bool {
+        audioData != nil
     }
 }
 

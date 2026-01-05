@@ -33,9 +33,20 @@ struct InputView: View {
 
                 // Text input area
                 textArea
+            }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
 
-                // Bottom bar with mic button
-                bottomBar
+                // Mic button in keyboard toolbar
+                Button(action: onStartVoice) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(Color.primaryTextColor)
+                }
+
+                Spacer()
             }
         }
         .onAppear {
@@ -103,33 +114,6 @@ struct InputView: View {
             }
         }
         .frame(maxHeight: .infinity)
-    }
-
-    // MARK: - Bottom Bar
-
-    private var bottomBar: some View {
-        HStack {
-            Spacer()
-
-            // Mic button
-            Button(action: onStartVoice) {
-                ZStack {
-                    Circle()
-                        .fill(Color.inputBackgroundColor)
-                        .frame(width: 56, height: 56)
-                        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
-
-                    Image(systemName: "mic")
-                        .font(.system(size: 22, weight: .regular))
-                        .foregroundStyle(Color.primaryTextColor)
-                }
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-        }
-        .padding(.vertical, 16)
-        .padding(.bottom, 8)
     }
 }
 

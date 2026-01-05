@@ -8,6 +8,7 @@ import SwiftData
 
 struct ProfileView: View {
     @Query private var entries: [LearningEntry]
+    @AppStorage("alwaysSaveAudio") private var alwaysSaveAudio = false
 
     private var totalEntries: Int {
         entries.count
@@ -62,11 +63,14 @@ struct ProfileView: View {
                     Divider()
                         .background(Color.dividerColor)
 
-                    // Settings section (stub for now)
+                    // Settings section
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Settings")
                             .font(.system(.headline, design: .serif))
                             .foregroundStyle(Color.primaryTextColor)
+
+                        // Audio setting with toggle
+                        audioSettingRow
 
                         settingsRow(icon: "bell", title: "Reminders", subtitle: "Coming in v2")
                         settingsRow(icon: "moon", title: "Appearance", subtitle: "System")
@@ -97,6 +101,33 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
+        .background(Color.inputBackgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var audioSettingRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "waveform")
+                .font(.system(size: 18))
+                .foregroundStyle(Color.secondaryTextColor)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Always save audio")
+                    .font(.system(.body, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+                Text("Keep voice recordings by default")
+                    .font(.system(.caption, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: $alwaysSaveAudio)
+                .labelsHidden()
+                .tint(Color.primaryTextColor)
+        }
+        .padding(16)
         .background(Color.inputBackgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
