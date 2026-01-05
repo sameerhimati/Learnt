@@ -25,7 +25,7 @@ struct LearntApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TodayView()
+            MainTabView()
         }
         .modelContainer(sharedModelContainer)
     }
