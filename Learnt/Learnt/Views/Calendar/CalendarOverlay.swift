@@ -50,7 +50,6 @@ struct CalendarOverlay: View {
                 .padding(.bottom, 24)
             }
             .background(Color.appBackgroundColor)
-            .navigationTitle(displayedMonth.formattedMonthYear)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
