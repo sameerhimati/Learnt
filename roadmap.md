@@ -20,7 +20,7 @@
 - [ ] Swipe between days (back in time only from today)
 - [ ] Activity dots showing current week
 - [ ] Local persistence (SwiftData)
-- [ ] One entry per day enforcement
+- [x] Multiple entries per day support
 - [ ] Edit existing entry
 - [ ] Dark mode support
 - [ ] Bottom tab bar (3 tabs)
@@ -56,6 +56,10 @@
 **Goal:** Polish for real users. Cloud backup. Richer insights.
 
 ### Features
+- [ ] Categories (4 preset: Personal, Work, Learning, Relationships)
+  - [ ] Category selector on entry creation
+  - [ ] Category icon on entry cards
+  - [ ] Category filtering in Insights
 - [ ] iCloud sync (CloudKit)
 - [ ] Notification reminders (configurable time)
 - [ ] Calendar overlay with full month view
@@ -83,6 +87,10 @@
 **Goal:** Ship to App Store. AI makes it magical.
 
 ### Features
+- [ ] AI auto-categorization
+  - Suggest category based on content
+  - User confirms or changes
+  - Suggest new categories (max 6-8 total)
 - [ ] AI monthly summaries (Claude API)
   - Top 3 themes
   - Pattern insights
@@ -141,7 +149,7 @@ Record key decisions and rationale:
 | Jan 4 | iOS only, no iPad | Focus. Ship faster. |
 | Jan 4 | SwiftData over Core Data | Modern, less boilerplate |
 | Jan 4 | New York serif font | Native iOS, no font loading |
-| Jan 4 | No categories | Simplicity over organization |
-| Jan 4 | One entry per day | Constraint creates habit |
+| Jan 4 | Multiple entries per day | Flexibility over constraint |
+| Jan 4 | Categories in v2 | Organization with minimal friction (4 preset categories) |
 | Jan 4 | Voice in v1 | Essential to vision |
 | Jan 4 | Local-first | Ship faster, add sync in v2 |
