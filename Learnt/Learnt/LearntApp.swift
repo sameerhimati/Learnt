@@ -26,6 +26,11 @@ struct LearntApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .onAppear {
+                    // Populate mock data for testing
+                    let context = sharedModelContainer.mainContext
+                    MockDataService.populateMockData(modelContext: context)
+                }
         }
         .modelContainer(sharedModelContainer)
     }

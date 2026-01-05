@@ -10,12 +10,16 @@ struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allEntries: [LearningEntry]
 
+    var tabBarActions: TabBarActions?
+
     @State private var selectedDate = Date()
     @State private var showCalendar = false
-    @State private var showInput = false
+    @State private var showInputChooser = false
+    @State private var showTextInput = false
     @State private var showVoiceInput = false
     @State private var showShareSheet = false
     @State private var editingEntry: LearningEntry?
+    @State private var lastTapCount = 0
 
     private var entryStore: EntryStore {
         EntryStore(modelContext: modelContext)
@@ -65,23 +69,32 @@ struct TodayView: View {
                 if entriesForSelectedDate.isEmpty {
                     EmptyStateView(
                         isToday: selectedDate.isToday,
-                        onAdd: { showInput = true }
+                        onAdd: { showInputChooser = true }
                     )
                 } else {
                     entriesListView
                 }
             }
 
-            // Floating Add Button (only when entries exist)
-            if !entriesForSelectedDate.isEmpty && selectedDate.isToday {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        AddButton(onTap: { showInput = true })
-                            .padding(24)
+            // Input chooser overlay
+            if showInputChooser {
+                InputChooserOverlay(
+                    onTextSelected: {
+                        showInputChooser = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            showTextInput = true
+                        }
+                    },
+                    onVoiceSelected: {
+                        showInputChooser = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            showVoiceInput = true
+                        }
+                    },
+                    onDismiss: {
+                        showInputChooser = false
                     }
-                }
+                )
             }
         }
         .gesture(swipeGesture)
@@ -96,32 +109,25 @@ struct TodayView: View {
                 onDismiss: { showCalendar = false }
             )
         }
-        .sheet(isPresented: $showInput) {
+        .sheet(isPresented: $showTextInput) {
             InputView(
+                showVoiceOption: false,
                 onSave: { content in
                     entryStore.createEntry(content: content, for: selectedDate)
-                    showInput = false
+                    showTextInput = false
                 },
-                onCancel: { showInput = false },
-                onStartVoice: {
-                    showInput = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showVoiceInput = true
-                    }
-                }
+                onCancel: { showTextInput = false }
             )
         }
         .sheet(item: $editingEntry) { entry in
             InputView(
                 initialContent: entry.content,
+                showVoiceOption: false,
                 onSave: { content in
                     entryStore.updateEntry(entry, content: content)
                     editingEntry = nil
                 },
-                onCancel: { editingEntry = nil },
-                onStartVoice: {
-                    // Voice input not available in edit mode for now
-                }
+                onCancel: { editingEntry = nil }
             )
         }
         .sheet(isPresented: $showVoiceInput) {
@@ -140,6 +146,30 @@ struct TodayView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheetView(initialDate: selectedDate)
+        }
+        .onChange(of: tabBarActions?.todayTabTapCount) { oldValue, newValue in
+            guard let newValue = newValue, newValue > lastTapCount else { return }
+            lastTapCount = newValue
+
+            if selectedDate.isToday {
+                // Already viewing today - toggle input chooser
+                showInputChooser.toggle()
+            } else {
+                // Viewing past date - jump to today
+                navigateTo(Date())
+            }
+        }
+        .onChange(of: showInputChooser) { _, isShowing in
+            // Sync chooser state to tab bar for X rotation
+            tabBarActions?.isChooserShowing = isShowing
+        }
+        .onChange(of: selectedDate) { _, newDate in
+            // Update tab bar icon state
+            tabBarActions?.isViewingToday = newDate.isToday
+        }
+        .onAppear {
+            // Set initial state
+            tabBarActions?.isViewingToday = selectedDate.isToday
         }
     }
 
@@ -189,7 +219,7 @@ struct TodayView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
-            .padding(.bottom, 100) // Space for floating button
+            .padding(.bottom, 80) // Space for tab bar
         }
     }
 

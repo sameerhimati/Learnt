@@ -7,9 +7,10 @@ import SwiftUI
 
 struct InputView: View {
     var initialContent: String = ""
+    var showVoiceOption: Bool = true
     let onSave: (String) -> Void
     let onCancel: () -> Void
-    let onStartVoice: () -> Void
+    var onStartVoice: (() -> Void)? = nil
 
     @State private var content: String = ""
     @FocusState private var isFocused: Bool
@@ -36,17 +37,19 @@ struct InputView: View {
             }
         }
         .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
+            if showVoiceOption, let onStartVoice = onStartVoice {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
 
-                // Mic button in keyboard toolbar
-                Button(action: onStartVoice) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(Color.primaryTextColor)
+                    // Mic button in keyboard toolbar
+                    Button(action: onStartVoice) {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 20, weight: .regular))
+                            .foregroundStyle(Color.primaryTextColor)
+                    }
+
+                    Spacer()
                 }
-
-                Spacer()
             }
         }
         .onAppear {
