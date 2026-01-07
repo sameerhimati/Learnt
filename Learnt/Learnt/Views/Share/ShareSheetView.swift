@@ -197,13 +197,6 @@ struct ShareSheetView: View {
                     .foregroundStyle(Color.primaryTextColor)
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Voice indicator
-                if entry.isVoiceEntry {
-                    Image(systemName: "mic")
-                        .font(.system(.caption))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)

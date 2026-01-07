@@ -59,7 +59,6 @@ struct MockDataService {
                 let entry = LearningEntry(
                     content: learning,
                     date: date,
-                    isVoiceEntry: Bool.random(),
                     sortOrder: 0
                 )
                 modelContext.insert(entry)
@@ -73,7 +72,6 @@ struct MockDataService {
                 let entry = LearningEntry(
                     content: learning,
                     date: date,
-                    isVoiceEntry: Bool.random(),
                     sortOrder: 0
                 )
                 modelContext.insert(entry)
@@ -88,7 +86,6 @@ struct MockDataService {
                 let entry = LearningEntry(
                     content: learning,
                     date: date,
-                    isVoiceEntry: Bool.random(),
                     sortOrder: 0
                 )
                 modelContext.insert(entry)
@@ -99,7 +96,6 @@ struct MockDataService {
                     let entry2 = LearningEntry(
                         content: learning2,
                         date: date,
-                        isVoiceEntry: false,
                         sortOrder: 1
                     )
                     modelContext.insert(entry2)

@@ -10,16 +10,15 @@ struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allEntries: [LearningEntry]
 
-    var tabBarActions: TabBarActions?
-
     @State private var selectedDate = Date()
     @State private var showCalendar = false
-    @State private var showInputChooser = false
-    @State private var showTextInput = false
-    @State private var showVoiceInput = false
+    @State private var showAddLearning = false
     @State private var showShareSheet = false
     @State private var editingEntry: LearningEntry?
-    @State private var lastTapCount = 0
+    @State private var reflectingEntry: LearningEntry?
+    @State private var isQuoteHidden = QuoteService.shared.isQuoteHidden
+
+    private let quoteService = QuoteService.shared
 
     private var entryStore: EntryStore {
         EntryStore(modelContext: modelContext)
@@ -67,34 +66,55 @@ struct TodayView: View {
 
                 // Content
                 if entriesForSelectedDate.isEmpty {
-                    EmptyStateView(
-                        isToday: selectedDate.isToday,
-                        onAdd: { showInputChooser = true }
-                    )
+                    VStack(spacing: 0) {
+                        // Quote of the day (only on today, when not hidden)
+                        if selectedDate.isToday && !isQuoteHidden {
+                            QuoteCard(
+                                quote: quoteService.quoteOfTheDay,
+                                onAddToEntry: { quoteText in
+                                    entryStore.createEntry(content: quoteText, for: selectedDate)
+                                },
+                                onHide: {
+                                    withAnimation(.easeOut(duration: 0.2)) {
+                                        quoteService.hideQuoteForToday()
+                                        isQuoteHidden = true
+                                    }
+                                }
+                            )
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+                        }
+
+                        EmptyStateView(
+                            isToday: selectedDate.isToday,
+                            onAdd: { showAddLearning = true }
+                        )
+                    }
                 } else {
                     entriesListView
                 }
             }
 
-            // Input chooser overlay
-            if showInputChooser {
-                InputChooserOverlay(
-                    onTextSelected: {
-                        showInputChooser = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            showTextInput = true
+            // Floating + button (bottom right) - only when there are entries
+            if !entriesForSelectedDate.isEmpty {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: { showAddLearning = true }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 24, weight: .medium))
+                                .foregroundStyle(Color.primaryTextColor)
+                                .frame(width: 56, height: 56)
+                                .background(Color.appBackgroundColor)
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                         }
-                    },
-                    onVoiceSelected: {
-                        showInputChooser = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            showVoiceInput = true
-                        }
-                    },
-                    onDismiss: {
-                        showInputChooser = false
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 24)
+                        .padding(.bottom, 80) // Above tab bar
                     }
-                )
+                }
             }
         }
         .gesture(swipeGesture)
@@ -109,67 +129,53 @@ struct TodayView: View {
                 onDismiss: { showCalendar = false }
             )
         }
-        .sheet(isPresented: $showTextInput) {
-            InputView(
-                showVoiceOption: false,
-                onSave: { content in
+        .sheet(isPresented: $showAddLearning) {
+            AddLearningView(
+                onSave: { content, app, sur, sim, que in
                     entryStore.createEntry(content: content, for: selectedDate)
-                    showTextInput = false
+                    // Update reflections if any were provided
+                    if let entry = entryStore.entries(for: selectedDate).last {
+                        if app != nil || sur != nil || sim != nil || que != nil {
+                            entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
+                        }
+                    }
+                    showAddLearning = false
                 },
-                onCancel: { showTextInput = false }
+                onCancel: { showAddLearning = false }
             )
         }
         .sheet(item: $editingEntry) { entry in
-            InputView(
-                initialContent: entry.content,
-                showVoiceOption: false,
-                onSave: { content in
+            AddLearningView(
+                onSave: { content, app, sur, sim, que in
                     entryStore.updateEntry(entry, content: content)
+                    entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
                     editingEntry = nil
                 },
-                onCancel: { editingEntry = nil }
+                onCancel: { editingEntry = nil },
+                initialContent: entry.content,
+                initialApplication: entry.application,
+                initialSurprise: entry.surprise,
+                initialSimplification: entry.simplification,
+                initialQuestion: entry.question
             )
         }
-        .sheet(isPresented: $showVoiceInput) {
-            VoiceInputView(
-                onSave: { content, audioData in
-                    entryStore.createEntry(
-                        content: content,
-                        for: selectedDate,
-                        isVoiceEntry: true,
-                        audioData: audioData
-                    )
-                    showVoiceInput = false
+        .sheet(item: $reflectingEntry) { entry in
+            AddLearningView(
+                onSave: { content, app, sur, sim, que in
+                    entryStore.updateEntry(entry, content: content)
+                    entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
+                    reflectingEntry = nil
                 },
-                onCancel: { showVoiceInput = false }
+                onCancel: { reflectingEntry = nil },
+                initialContent: entry.content,
+                initialApplication: entry.application,
+                initialSurprise: entry.surprise,
+                initialSimplification: entry.simplification,
+                initialQuestion: entry.question
             )
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheetView(initialDate: selectedDate)
-        }
-        .onChange(of: tabBarActions?.todayTabTapCount) { oldValue, newValue in
-            guard let newValue = newValue, newValue > lastTapCount else { return }
-            lastTapCount = newValue
-
-            if selectedDate.isToday {
-                // Already viewing today - toggle input chooser
-                showInputChooser.toggle()
-            } else {
-                // Viewing past date - jump to today
-                navigateTo(Date())
-            }
-        }
-        .onChange(of: showInputChooser) { _, isShowing in
-            // Sync chooser state to tab bar for X rotation
-            tabBarActions?.isChooserShowing = isShowing
-        }
-        .onChange(of: selectedDate) { _, newDate in
-            // Update tab bar icon state
-            tabBarActions?.isViewingToday = newDate.isToday
-        }
-        .onAppear {
-            // Set initial state
-            tabBarActions?.isViewingToday = selectedDate.isToday
         }
     }
 
@@ -211,10 +217,28 @@ struct TodayView: View {
     private var entriesListView: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
+                // Quote of the day (only on today, when not hidden)
+                if selectedDate.isToday && !isQuoteHidden {
+                    QuoteCard(
+                        quote: quoteService.quoteOfTheDay,
+                        onAddToEntry: { quoteText in
+                            entryStore.createEntry(content: quoteText, for: selectedDate)
+                        },
+                        onHide: {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                quoteService.hideQuoteForToday()
+                                isQuoteHidden = true
+                            }
+                        }
+                    )
+                }
+
                 ForEach(entriesForSelectedDate) { entry in
-                    EntryCard(entry: entry) {
-                        editingEntry = entry
-                    }
+                    LearningCard(
+                        entry: entry,
+                        onEdit: { editingEntry = entry },
+                        onAddReflection: { reflectingEntry = entry }
+                    )
                 }
             }
             .padding(.horizontal, 16)

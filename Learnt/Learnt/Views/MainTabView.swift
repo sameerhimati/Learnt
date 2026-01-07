@@ -6,7 +6,6 @@ import SwiftUI
 
 struct MainTabView: View {
     @State private var selectedTab = 1  // Start on Today (center)
-    @State private var tabBarActions = TabBarActions()
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -14,19 +13,19 @@ struct MainTabView: View {
             Group {
                 switch selectedTab {
                 case 0:
-                    InsightsView()
+                    ReviewView()
                 case 1:
-                    TodayView(tabBarActions: tabBarActions)
+                    TodayView()
                 case 2:
                     ProfileView()
                 default:
-                    TodayView(tabBarActions: tabBarActions)
+                    TodayView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Custom Tab Bar
-            CustomTabBar(selectedTab: $selectedTab, tabBarActions: tabBarActions)
+            CustomTabBar(selectedTab: $selectedTab)
         }
         .ignoresSafeArea(.keyboard)
     }

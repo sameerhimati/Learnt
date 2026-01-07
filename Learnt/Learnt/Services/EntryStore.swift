@@ -6,6 +6,13 @@
 import Foundation
 import SwiftData
 
+/// Result of a spaced repetition review
+enum ReviewResult {
+    case nailed   // Recalled perfectly → interval × 2.5
+    case partial  // Partially recalled → interval × 1.5
+    case forgot   // Couldn't recall → reset to 1 day
+}
+
 @Observable
 final class EntryStore {
     private var modelContext: ModelContext
@@ -68,16 +75,14 @@ final class EntryStore {
 
     // MARK: - Create
 
-    func createEntry(content: String, for date: Date, isVoiceEntry: Bool = false, audioData: Data? = nil) {
+    func createEntry(content: String, for date: Date) {
         let existingEntries = entries(for: date)
         let sortOrder = existingEntries.count
 
         let entry = LearningEntry(
             content: content,
             date: date,
-            isVoiceEntry: isVoiceEntry,
-            sortOrder: sortOrder,
-            audioData: audioData
+            sortOrder: sortOrder
         )
         modelContext.insert(entry)
         save()
@@ -87,6 +92,91 @@ final class EntryStore {
 
     func updateEntry(_ entry: LearningEntry, content: String) {
         entry.content = content
+        entry.updatedAt = Date()
+        save()
+    }
+
+    func updateReflections(
+        _ entry: LearningEntry,
+        application: String? = nil,
+        surprise: String? = nil,
+        simplification: String? = nil,
+        question: String? = nil
+    ) {
+        entry.application = application
+        entry.surprise = surprise
+        entry.simplification = simplification
+        entry.question = question
+        entry.updatedAt = Date()
+        save()
+    }
+
+    // MARK: - Review (Spaced Repetition)
+
+    func entriesDueForReview() -> [LearningEntry] {
+        let now = Date()
+        let predicate = #Predicate<LearningEntry> { entry in
+            entry.nextReviewDate != nil && entry.nextReviewDate! <= now
+        }
+        let descriptor = FetchDescriptor<LearningEntry>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.nextReviewDate)]
+        )
+
+        do {
+            return try modelContext.fetch(descriptor)
+        } catch {
+            print("Failed to fetch review entries: \(error)")
+            return []
+        }
+    }
+
+    func upcomingReviews(limit: Int = 10) -> [LearningEntry] {
+        let now = Date()
+        let predicate = #Predicate<LearningEntry> { entry in
+            entry.nextReviewDate != nil && entry.nextReviewDate! > now
+        }
+        var descriptor = FetchDescriptor<LearningEntry>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.nextReviewDate)]
+        )
+        descriptor.fetchLimit = limit
+
+        do {
+            return try modelContext.fetch(descriptor)
+        } catch {
+            print("Failed to fetch upcoming reviews: \(error)")
+            return []
+        }
+    }
+
+    /// Record a review result and update spaced repetition schedule
+    /// - Parameters:
+    ///   - entry: The entry being reviewed
+    ///   - result: How well the user recalled (.nailed, .partial, .forgot)
+    func recordReview(_ entry: LearningEntry, result: ReviewResult) {
+        let calendar = Calendar.current
+
+        switch result {
+        case .nailed:
+            // Multiply interval by 2.5, max 90 days
+            let newInterval = min(Int(Double(entry.reviewInterval) * 2.5), 90)
+            entry.reviewInterval = newInterval
+            entry.reviewCount += 1
+
+        case .partial:
+            // Multiply interval by 1.5
+            let newInterval = min(Int(Double(entry.reviewInterval) * 1.5), 90)
+            entry.reviewInterval = newInterval
+            entry.reviewCount += 1
+
+        case .forgot:
+            // Reset to 1 day
+            entry.reviewInterval = 1
+        }
+
+        // Set next review date
+        entry.nextReviewDate = calendar.date(byAdding: .day, value: entry.reviewInterval, to: Date())
         entry.updatedAt = Date()
         save()
     }
