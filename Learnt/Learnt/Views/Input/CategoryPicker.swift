@@ -11,6 +11,8 @@ struct CategoryPicker: View {
     @Query(sort: \Category.sortOrder) private var categories: [Category]
 
     @Binding var selectedCategories: [Category]
+    var aiSuggestedIDs: Set<UUID> = []  // AI-suggested category IDs
+
     @State private var showAddCategory = false
 
     private let columns = [
@@ -74,6 +76,7 @@ struct CategoryPicker: View {
 
     private func categoryChip(category: Category) -> some View {
         let isSelected = selectedCategories.contains { $0.id == category.id }
+        let isAISuggested = aiSuggestedIDs.contains(category.id)
 
         return Button {
             if isSelected {
@@ -87,6 +90,13 @@ struct CategoryPicker: View {
                     .font(.system(size: 11))
                 Text(category.name)
                     .font(.system(size: 13, design: .serif))
+
+                // AI suggestion indicator
+                if isAISuggested && !isSelected {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
             }
             .foregroundStyle(isSelected ? Color.appBackgroundColor : Color.primaryTextColor)
             .padding(.horizontal, 12)

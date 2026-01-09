@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 enum InputMode: String, CaseIterable {
     case text = "Text"
@@ -24,6 +25,9 @@ struct AddLearningView: View {
     var initialContentAudioFileName: String? = nil
     var initialTranscription: String? = nil
 
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Category.sortOrder) private var allCategories: [Category]
+
     @State private var inputMode: InputMode = .text
     @State private var content: String = ""
     @State private var application: String = ""
@@ -34,6 +38,12 @@ struct AddLearningView: View {
     @State private var selectedCategories: [Category] = []
     @State private var contentAudioFileName: String?
     @State private var transcription: String?
+
+    // AI features
+    @State private var aiSuggestedCategoryIDs: Set<UUID> = []
+    @State private var hasUserModifiedCategories = false
+    @State private var generatedPrompts: ReflectionPromptsResult?
+    @State private var isGeneratingPrompts = false
 
     @FocusState private var focusedField: Field?
 
@@ -69,8 +79,14 @@ struct AddLearningView: View {
                         // Main learning input with mode toggle
                         mainLearningSection
 
-                        // Category picker
-                        CategoryPicker(selectedCategories: $selectedCategories)
+                        // Category picker with AI suggestions
+                        CategoryPicker(
+                            selectedCategories: $selectedCategories,
+                            aiSuggestedIDs: aiSuggestedCategoryIDs
+                        )
+                        .onChange(of: selectedCategories) { _, _ in
+                            hasUserModifiedCategories = true
+                        }
 
                         // Reflection prompts (expandable) - text only
                         if showReflections {
@@ -110,6 +126,91 @@ struct AddLearningView: View {
                     focusedField = .content
                 }
             }
+        }
+        .onChange(of: content) { _, newValue in
+            // Trigger AI category suggestions (debounced)
+            suggestCategoriesDebounced(for: newValue)
+        }
+        .onChange(of: showReflections) { _, show in
+            // Generate AI reflection prompts when section is opened
+            if show && generatedPrompts == nil && !content.isEmpty {
+                generateReflectionPrompts()
+            }
+        }
+    }
+
+    // MARK: - AI Features
+
+    @State private var suggestionTask: Task<Void, Never>?
+
+    private func suggestCategoriesDebounced(for text: String) {
+        // Cancel any pending suggestion
+        suggestionTask?.cancel()
+
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            aiSuggestedCategoryIDs = []
+            return
+        }
+
+        suggestionTask = Task {
+            // Debounce: wait 500ms
+            try? await Task.sleep(for: .milliseconds(500))
+
+            // Check if task was cancelled
+            guard !Task.isCancelled else { return }
+
+            // Check if text is still the same
+            guard content == text else { return }
+
+            // Get AI suggestions (using mock in DEBUG, real AI when available)
+            let suggestions: [String]
+            #if DEBUG
+            suggestions = AIService.mockCategorySuggestions(for: text)
+            #else
+            suggestions = await AIService.shared.suggestCategories(
+                for: text,
+                availableCategories: allCategories.map(\.name)
+            )
+            #endif
+
+            await MainActor.run {
+                // Map suggested names to category IDs
+                let suggestedIDs = allCategories
+                    .filter { suggestions.contains($0.name) }
+                    .map(\.id)
+
+                aiSuggestedCategoryIDs = Set(suggestedIDs)
+
+                // Auto-select if user hasn't manually modified categories
+                if !hasUserModifiedCategories && selectedCategories.isEmpty {
+                    let suggestedCategories = allCategories.filter { suggestions.contains($0.name) }
+                    selectedCategories = Array(suggestedCategories.prefix(2))
+                }
+            }
+        }
+    }
+
+    private func generateReflectionPrompts() {
+        guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        isGeneratingPrompts = true
+
+        Task {
+            #if DEBUG
+            // Use mock prompts in DEBUG
+            let prompts = AIService.mockReflectionPrompts(for: content)
+            await MainActor.run {
+                generatedPrompts = prompts
+                isGeneratingPrompts = false
+            }
+            #else
+            // Use real AI when available
+            let prompts = await AIService.shared.generateReflectionPrompts(for: content)
+            await MainActor.run {
+                generatedPrompts = prompts
+                isGeneratingPrompts = false
+            }
+            #endif
         }
     }
 
@@ -230,9 +331,21 @@ struct AddLearningView: View {
     private var reflectionPromptsSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Text("Reflections")
-                    .font(.system(.subheadline, design: .serif, weight: .medium))
-                    .foregroundStyle(Color.secondaryTextColor)
+                HStack(spacing: 6) {
+                    Text("Reflections")
+                        .font(.system(.subheadline, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    // AI indicator
+                    if generatedPrompts != nil {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.secondaryTextColor)
+                    } else if isGeneratingPrompts {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                    }
+                }
 
                 Spacer()
 
@@ -243,28 +356,28 @@ struct AddLearningView: View {
 
             reflectionPrompt(
                 icon: "lightbulb",
-                label: "How could you apply this?",
+                label: generatedPrompts?.applicationPrompt ?? "How could you apply this?",
                 text: $application,
                 field: .application
             )
 
             reflectionPrompt(
                 icon: "exclamationmark.circle",
-                label: "What surprised you?",
+                label: generatedPrompts?.surprisePrompt ?? "What surprised you?",
                 text: $surprise,
                 field: .surprise
             )
 
             reflectionPrompt(
                 icon: "text.quote",
-                label: "Explain it simply",
+                label: generatedPrompts?.simplificationPrompt ?? "Explain it simply",
                 text: $simplification,
                 field: .simplification
             )
 
             reflectionPrompt(
                 icon: "questionmark.circle",
-                label: "What question does this raise?",
+                label: generatedPrompts?.questionPrompt ?? "What question does this raise?",
                 text: $question,
                 field: .question
             )

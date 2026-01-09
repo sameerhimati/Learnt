@@ -13,6 +13,11 @@ struct ProfileView: View {
     @State private var showWrapped = false
     @State private var showStreakShare = false
 
+    // AI Summary state
+    @State private var aiSummary: String?
+    @State private var standoutInsight: String?
+    @State private var isGeneratingAISummary = false
+
     // MARK: - Computed Stats
 
     private var totalEntries: Int {
@@ -122,11 +127,26 @@ struct ProfileView: View {
             .sorted { $0.count > $1.count }
     }
 
-    private var wrappedData: WrappedData {
-        let calendar = Calendar.current
-        let currentMonth = calendar.component(.month, from: Date())
-        let currentYear = calendar.component(.year, from: Date())
+    private var mostActiveDay: String {
+        guard !entries.isEmpty else { return "Monday" }
 
+        let calendar = Calendar.current
+        var dayCount: [Int: Int] = [:]  // weekday: count
+
+        for entry in entries {
+            let weekday = calendar.component(.weekday, from: entry.date)
+            dayCount[weekday, default: 0] += 1
+        }
+
+        // Find the day with the most entries
+        let mostActive = dayCount.max(by: { $0.value < $1.value })?.key ?? 1
+
+        // Convert weekday number to name (1=Sunday, 2=Monday, etc.)
+        let formatter = DateFormatter()
+        return formatter.weekdaySymbols[mostActive - 1]
+    }
+
+    private var wrappedData: WrappedData {
         let monthFormatter = DateFormatter()
         monthFormatter.dateFormat = "MMMM yyyy"
 
@@ -135,10 +155,47 @@ struct ProfileView: View {
             totalLearnings: totalEntries,
             totalDays: totalDays,
             topCategories: topCategories,
-            mostActiveDay: "Monday", // TODO: Calculate actual most active day
+            mostActiveDay: mostActiveDay,
             currentStreak: currentStreak,
-            longestStreak: longestStreak
+            longestStreak: longestStreak,
+            aiSummary: aiSummary,
+            standoutInsight: standoutInsight
         )
+    }
+
+    // MARK: - AI Summary
+
+    private func generateAISummary() {
+        guard !entries.isEmpty, !isGeneratingAISummary else { return }
+
+        isGeneratingAISummary = true
+
+        let monthFormatter = DateFormatter()
+        monthFormatter.dateFormat = "MMMM yyyy"
+        let period = monthFormatter.string(from: Date())
+
+        Task {
+            #if DEBUG
+            // Use mock data in DEBUG
+            let result = AIService.mockMonthlySummary(count: entries.count, period: period)
+            await MainActor.run {
+                aiSummary = result.summary
+                standoutInsight = result.standoutInsight
+                isGeneratingAISummary = false
+            }
+            #else
+            // Use real AI when available
+            let result = await AIService.shared.generateMonthlySummary(
+                entries: entries,
+                period: period
+            )
+            await MainActor.run {
+                aiSummary = result?.summary
+                standoutInsight = result?.standoutInsight
+                isGeneratingAISummary = false
+            }
+            #endif
+        }
     }
 
     var body: some View {
@@ -185,6 +242,12 @@ struct ProfileView: View {
                 WrappedView(data: wrappedData) { cardIndex in
                     // Share the wrapped card
                     shareWrappedCard(at: cardIndex)
+                }
+            }
+            .onChange(of: showWrapped) { _, isShowing in
+                // Generate AI summary when Wrapped view is opened
+                if isShowing && aiSummary == nil {
+                    generateAISummary()
                 }
             }
             .sheet(isPresented: $showStreakShare) {

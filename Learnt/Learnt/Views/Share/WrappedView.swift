@@ -14,6 +14,10 @@ struct WrappedData {
     let mostActiveDay: String
     let currentStreak: Int
     let longestStreak: Int
+
+    // AI-generated summary (optional)
+    var aiSummary: String? = nil
+    var standoutInsight: String? = nil
 }
 
 /// Spotify Wrapped-style monthly/yearly summary view
@@ -207,7 +211,7 @@ struct WrappedView: View {
     }
 
     private var summaryCard: some View {
-        VStack(spacing: 40) {
+        VStack(spacing: 32) {
             Spacer()
 
             Text(data.period)
@@ -222,13 +226,46 @@ struct WrappedView: View {
                 summaryRow(value: "\(data.longestStreak)", label: "Longest Streak")
             }
 
+            // AI-generated summary
+            if let summary = data.aiSummary {
+                VStack(spacing: 12) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 10))
+                        Text("AI Insights")
+                            .font(.system(size: 11, design: .serif))
+                    }
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+
+                    Text(summary)
+                        .font(.system(size: 14, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                }
+                .padding(.top, 8)
+            }
+
+            // Standout insight
+            if let insight = data.standoutInsight {
+                Text(insight)
+                    .font(.system(size: 13, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+                    .italic()
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 8)
+            }
+
             Spacer()
 
-            Text("Keep learning, keep growing")
-                .font(.system(size: 16, design: .serif))
-                .foregroundStyle(Color.secondaryTextColor)
-                .italic()
-                .padding(.bottom, 40)
+            // Fallback message if no AI summary
+            if data.aiSummary == nil {
+                Text("Keep learning, keep growing")
+                    .font(.system(size: 16, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+                    .italic()
+                    .padding(.bottom, 40)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 32)
