@@ -26,6 +26,16 @@ final class LearningEntry {
     var reviewInterval: Int       // days until next review (starts at 1)
     var reviewCount: Int          // times successfully reviewed
 
+    // Categories (can have multiple)
+    @Relationship var categories: [Category] = []
+
+    // Voice memo audio file paths (stored as file names in Documents)
+    var contentAudioFileName: String?
+    var applicationAudioFileName: String?
+    var surpriseAudioFileName: String?
+    var simplificationAudioFileName: String?
+    var questionAudioFileName: String?
+
     init(
         content: String,
         date: Date = Date(),
@@ -84,4 +94,29 @@ extension LearningEntry {
         let components = calendar.dateComponents([.day], from: Date().startOfDay, to: nextReview.startOfDay)
         return components.day
     }
+
+    // MARK: - Audio Helpers
+
+    var hasAnyAudio: Bool {
+        contentAudioFileName != nil ||
+        applicationAudioFileName != nil ||
+        surpriseAudioFileName != nil ||
+        simplificationAudioFileName != nil ||
+        questionAudioFileName != nil
+    }
+
+    private static var documentsDirectory: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+
+    func audioURL(for fileName: String?) -> URL? {
+        guard let fileName = fileName else { return nil }
+        return Self.documentsDirectory.appendingPathComponent(fileName)
+    }
+
+    var contentAudioURL: URL? { audioURL(for: contentAudioFileName) }
+    var applicationAudioURL: URL? { audioURL(for: applicationAudioFileName) }
+    var surpriseAudioURL: URL? { audioURL(for: surpriseAudioFileName) }
+    var simplificationAudioURL: URL? { audioURL(for: simplificationAudioFileName) }
+    var questionAudioURL: URL? { audioURL(for: questionAudioFileName) }
 }

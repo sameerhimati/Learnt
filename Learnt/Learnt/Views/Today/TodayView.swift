@@ -16,6 +16,7 @@ struct TodayView: View {
     @State private var showShareSheet = false
     @State private var editingEntry: LearningEntry?
     @State private var reflectingEntry: LearningEntry?
+    @State private var entryToDelete: LearningEntry?
     @State private var isQuoteHidden = QuoteService.shared.isQuoteHidden
 
     private let quoteService = QuoteService.shared
@@ -131,10 +132,11 @@ struct TodayView: View {
         }
         .sheet(isPresented: $showAddLearning) {
             AddLearningView(
-                onSave: { content, app, sur, sim, que in
+                onSave: { content, app, sur, sim, que, categories, audioFileName in
                     entryStore.createEntry(content: content, for: selectedDate)
-                    // Update reflections if any were provided
                     if let entry = entryStore.entries(for: selectedDate).last {
+                        entry.categories = categories
+                        entry.contentAudioFileName = audioFileName
                         if app != nil || sur != nil || sim != nil || que != nil {
                             entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
                         }
@@ -146,8 +148,10 @@ struct TodayView: View {
         }
         .sheet(item: $editingEntry) { entry in
             AddLearningView(
-                onSave: { content, app, sur, sim, que in
+                onSave: { content, app, sur, sim, que, categories, audioFileName in
                     entryStore.updateEntry(entry, content: content)
+                    entry.categories = categories
+                    entry.contentAudioFileName = audioFileName
                     entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
                     editingEntry = nil
                 },
@@ -156,13 +160,17 @@ struct TodayView: View {
                 initialApplication: entry.application,
                 initialSurprise: entry.surprise,
                 initialSimplification: entry.simplification,
-                initialQuestion: entry.question
+                initialQuestion: entry.question,
+                initialCategories: entry.categories,
+                initialContentAudioFileName: entry.contentAudioFileName
             )
         }
         .sheet(item: $reflectingEntry) { entry in
             AddLearningView(
-                onSave: { content, app, sur, sim, que in
+                onSave: { content, app, sur, sim, que, categories, audioFileName in
                     entryStore.updateEntry(entry, content: content)
+                    entry.categories = categories
+                    entry.contentAudioFileName = audioFileName
                     entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
                     reflectingEntry = nil
                 },
@@ -171,11 +179,29 @@ struct TodayView: View {
                 initialApplication: entry.application,
                 initialSurprise: entry.surprise,
                 initialSimplification: entry.simplification,
-                initialQuestion: entry.question
+                initialQuestion: entry.question,
+                initialCategories: entry.categories,
+                initialContentAudioFileName: entry.contentAudioFileName
             )
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheetView(initialDate: selectedDate)
+        }
+        .alert("Delete Learning?", isPresented: Binding(
+            get: { entryToDelete != nil },
+            set: { if !$0 { entryToDelete = nil } }
+        )) {
+            Button("Cancel", role: .cancel) {
+                entryToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let entry = entryToDelete {
+                    entryStore.deleteEntry(entry)
+                }
+                entryToDelete = nil
+            }
+        } message: {
+            Text("This learning will be permanently deleted.")
         }
     }
 
@@ -237,7 +263,8 @@ struct TodayView: View {
                     LearningCard(
                         entry: entry,
                         onEdit: { editingEntry = entry },
-                        onAddReflection: { reflectingEntry = entry }
+                        onAddReflection: { reflectingEntry = entry },
+                        onDelete: { entryToDelete = entry }
                     )
                 }
             }

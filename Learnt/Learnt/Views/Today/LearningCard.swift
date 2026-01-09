@@ -9,6 +9,7 @@ struct LearningCard: View {
     let entry: LearningEntry
     let onEdit: () -> Void
     let onAddReflection: () -> Void
+    let onDelete: () -> Void
 
     @State private var isExpanded = false
 
@@ -47,17 +48,41 @@ struct LearningCard: View {
                     .lineSpacing(4)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Meta row: time + reflection count
+                // Meta row: time + categories + reflection count
                 HStack(spacing: 8) {
                     Text(entry.createdAt, style: .time)
                         .font(.system(size: 11, design: .serif))
                         .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+
+                    if !entry.categories.isEmpty {
+                        Text("·")
+                            .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                        HStack(spacing: 4) {
+                            ForEach(entry.categories.prefix(2)) { category in
+                                Image(systemName: category.icon)
+                                    .font(.system(size: 9))
+                            }
+                            if entry.categories.count > 2 {
+                                Text("+\(entry.categories.count - 2)")
+                                    .font(.system(size: 9, design: .serif))
+                            }
+                        }
+                        .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                    }
 
                     if entry.hasReflections {
                         Text("·")
                             .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
                         Text("\(entry.reflectionCount) reflection\(entry.reflectionCount == 1 ? "" : "s")")
                             .font(.system(size: 11, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                    }
+
+                    if entry.contentAudioFileName != nil {
+                        Text("·")
+                            .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                        Image(systemName: "waveform")
+                            .font(.system(size: 9))
                             .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
                     }
                 }
@@ -81,6 +106,16 @@ struct LearningCard: View {
                 .frame(height: 1)
                 .padding(.top, 12)
 
+            // Content audio playback (if has audio)
+            if entry.contentAudioURL != nil {
+                HStack(spacing: 8) {
+                    Text("Voice memo")
+                        .font(.system(size: 11, weight: .medium, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+                    AudioPlaybackButton(audioURL: entry.contentAudioURL)
+                }
+            }
+
             // Existing reflections
             if entry.hasReflections {
                 reflectionsSection
@@ -100,6 +135,13 @@ struct LearningCard: View {
                 .buttonStyle(.plain)
 
                 Spacer()
+
+                Button(action: onDelete) {
+                    Text("Delete")
+                        .font(.system(size: 13, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+                .buttonStyle(.plain)
 
                 Button(action: onEdit) {
                     Text("Edit")
@@ -180,7 +222,8 @@ struct LearningCard: View {
                     return entry
                 }(),
                 onEdit: {},
-                onAddReflection: {}
+                onAddReflection: {},
+                onDelete: {}
             )
 
             // Entry with reflections
@@ -194,7 +237,8 @@ struct LearningCard: View {
                     return entry
                 }(),
                 onEdit: {},
-                onAddReflection: {}
+                onAddReflection: {},
+                onDelete: {}
             )
 
             // Long entry
@@ -206,7 +250,8 @@ struct LearningCard: View {
                     return entry
                 }(),
                 onEdit: {},
-                onAddReflection: {}
+                onAddReflection: {},
+                onDelete: {}
             )
         }
         .padding()

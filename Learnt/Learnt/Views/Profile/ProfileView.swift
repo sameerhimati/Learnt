@@ -68,6 +68,17 @@ struct ProfileView: View {
         return "\(rate)%"
     }
 
+    private var reminderSubtitle: String {
+        let settings = SettingsService.shared
+        let enabled = [settings.captureReminderEnabled, settings.reviewReminderEnabled].filter { $0 }.count
+        switch enabled {
+        case 0: return "Off"
+        case 1: return "1 reminder"
+        case 2: return "2 reminders"
+        default: return "On"
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -153,7 +164,36 @@ struct ProfileView: View {
                 .font(.system(.subheadline, design: .serif, weight: .medium))
                 .foregroundStyle(Color.secondaryTextColor)
 
-            settingsRow(icon: "bell", title: "Reminders", subtitle: "Coming soon")
+            NavigationLink {
+                ReminderSettingsView()
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "bell")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.secondaryTextColor)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Reminders")
+                            .font(.system(.body, design: .serif))
+                            .foregroundStyle(Color.primaryTextColor)
+                        Text(reminderSubtitle)
+                            .font(.system(.caption, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+                .padding(16)
+                .background(Color.inputBackgroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
             settingsRow(icon: "moon", title: "Appearance", subtitle: "System")
             settingsRow(icon: "square.and.arrow.up", title: "Export Data", subtitle: "Coming soon")
 

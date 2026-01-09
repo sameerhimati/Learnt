@@ -5,8 +5,13 @@
 
 import SwiftUI
 
+enum InputMode: String, CaseIterable {
+    case text = "Text"
+    case voice = "Voice"
+}
+
 struct AddLearningView: View {
-    let onSave: (String, String?, String?, String?, String?) -> Void
+    let onSave: (String, String?, String?, String?, String?, [Category], String?) -> Void
     let onCancel: () -> Void
 
     // For editing existing entry
@@ -15,13 +20,18 @@ struct AddLearningView: View {
     var initialSurprise: String? = nil
     var initialSimplification: String? = nil
     var initialQuestion: String? = nil
+    var initialCategories: [Category] = []
+    var initialContentAudioFileName: String? = nil
 
+    @State private var inputMode: InputMode = .text
     @State private var content: String = ""
     @State private var application: String = ""
     @State private var surprise: String = ""
     @State private var simplification: String = ""
     @State private var question: String = ""
     @State private var showReflections = false
+    @State private var selectedCategories: [Category] = []
+    @State private var contentAudioFileName: String?
 
     @FocusState private var focusedField: Field?
 
@@ -30,11 +40,12 @@ struct AddLearningView: View {
     }
 
     private var isEditing: Bool {
-        !initialContent.isEmpty
+        !initialContent.isEmpty || initialContentAudioFileName != nil
     }
 
     private var canSave: Bool {
-        !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // Can save if there's text content OR audio recording
+        !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || contentAudioFileName != nil
     }
 
     private var hasReflections: Bool {
@@ -53,10 +64,13 @@ struct AddLearningView: View {
                 // Content
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // Main learning input
+                        // Main learning input with mode toggle
                         mainLearningSection
 
-                        // Reflection prompts (expandable)
+                        // Category picker
+                        CategoryPicker(selectedCategories: $selectedCategories)
+
+                        // Reflection prompts (expandable) - text only
                         if showReflections {
                             reflectionPromptsSection
                         } else {
@@ -66,6 +80,10 @@ struct AddLearningView: View {
                     .padding(16)
                     .padding(.bottom, 100)
                 }
+                .scrollDismissesKeyboard(.interactively)
+                .onTapGesture {
+                    focusedField = nil
+                }
             }
         }
         .onAppear {
@@ -74,10 +92,20 @@ struct AddLearningView: View {
             surprise = initialSurprise ?? ""
             simplification = initialSimplification ?? ""
             question = initialQuestion ?? ""
+            selectedCategories = initialCategories
+            contentAudioFileName = initialContentAudioFileName
             showReflections = hasReflections
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                focusedField = .content
+            // Set initial input mode based on existing content
+            if initialContentAudioFileName != nil && initialContent.isEmpty {
+                inputMode = .voice
+            }
+
+            // Only auto-focus for text mode
+            if inputMode == .text {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    focusedField = .content
+                }
             }
         }
     }
@@ -113,20 +141,65 @@ struct AddLearningView: View {
     // MARK: - Main Learning Section
 
     private var mainLearningSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("What did you learn?")
                 .font(.system(.subheadline, design: .serif, weight: .medium))
                 .foregroundStyle(Color.secondaryTextColor)
 
-            TextField("", text: $content, axis: .vertical)
-                .font(.system(.title3, design: .serif))
-                .foregroundStyle(Color.primaryTextColor)
-                .focused($focusedField, equals: .content)
-                .lineLimit(5...10)
-                .padding(16)
-                .background(Color.inputBackgroundColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            // Input mode toggle
+            inputModeToggle
+
+            // Content based on mode
+            if inputMode == .text {
+                textInputView
+            } else {
+                VoiceRecordingView(audioFileName: $contentAudioFileName, title: $content)
+            }
         }
+    }
+
+    private var inputModeToggle: some View {
+        HStack(spacing: 0) {
+            ForEach(InputMode.allCases, id: \.self) { mode in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        inputMode = mode
+                        if mode == .text {
+                            focusedField = .content
+                        } else {
+                            focusedField = nil
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: mode == .text ? "character.cursor.ibeam" : "mic.fill")
+                            .font(.system(size: 12))
+                        Text(mode.rawValue)
+                            .font(.system(size: 13, design: .serif))
+                    }
+                    .foregroundStyle(inputMode == mode ? Color.appBackgroundColor : Color.secondaryTextColor)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(inputMode == mode ? Color.primaryTextColor : Color.clear)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Color.inputBackgroundColor)
+        .clipShape(Capsule())
+    }
+
+    private var textInputView: some View {
+        TextField("", text: $content, axis: .vertical)
+            .font(.system(.title3, design: .serif))
+            .foregroundStyle(Color.primaryTextColor)
+            .focused($focusedField, equals: .content)
+            .lineLimit(5...10)
+            .padding(16)
+            .background(Color.inputBackgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Add Reflection Button
@@ -149,7 +222,7 @@ struct AddLearningView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Reflection Prompts Section
+    // MARK: - Reflection Prompts Section (Text Only)
 
     private var reflectionPromptsSection: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -227,30 +300,34 @@ struct AddLearningView: View {
 
     private func saveEntry() {
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedContent.isEmpty else { return }
+
+        // Allow saving with audio only (no text required)
+        guard !trimmedContent.isEmpty || contentAudioFileName != nil else { return }
 
         let app = application.isEmpty ? nil : application.trimmingCharacters(in: .whitespacesAndNewlines)
         let sur = surprise.isEmpty ? nil : surprise.trimmingCharacters(in: .whitespacesAndNewlines)
         let sim = simplification.isEmpty ? nil : simplification.trimmingCharacters(in: .whitespacesAndNewlines)
         let que = question.isEmpty ? nil : question.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        onSave(trimmedContent, app, sur, sim, que)
+        onSave(trimmedContent, app, sur, sim, que, selectedCategories, contentAudioFileName)
     }
 }
 
 #Preview("New Learning") {
     AddLearningView(
-        onSave: { _, _, _, _, _ in },
+        onSave: { _, _, _, _, _, _, _ in },
         onCancel: {}
     )
+    .modelContainer(for: [LearningEntry.self, Category.self], inMemory: true)
 }
 
 #Preview("Edit Learning") {
     AddLearningView(
-        onSave: { _, _, _, _, _ in },
+        onSave: { _, _, _, _, _, _, _ in },
         onCancel: {},
         initialContent: "SwiftUI animations make interfaces feel responsive",
         initialApplication: "Use in my next project",
         initialQuestion: "What about performance?"
     )
+    .modelContainer(for: [LearningEntry.self, Category.self], inMemory: true)
 }

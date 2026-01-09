@@ -13,6 +13,7 @@ struct LearntApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             LearningEntry.self,
+            Category.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -30,6 +31,15 @@ struct LearntApp: App {
                     // Populate mock data for testing
                     let context = sharedModelContainer.mainContext
                     MockDataService.populateMockData(modelContext: context)
+
+                    // Ensure category presets exist
+                    let categoryService = CategoryService(modelContext: context)
+                    categoryService.ensurePresetsExist()
+
+                    // Initialize notification service
+                    Task {
+                        await NotificationService.shared.updateAuthorizationStatus()
+                    }
                 }
         }
         .modelContainer(sharedModelContainer)
