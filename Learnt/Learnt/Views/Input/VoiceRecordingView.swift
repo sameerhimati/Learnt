@@ -9,13 +9,18 @@ import AVFoundation
 struct VoiceRecordingView: View {
     @Binding var audioFileName: String?
     @Binding var title: String
+    @Binding var transcription: String?
 
     @State private var isRecording = false
     @State private var recordingDuration: TimeInterval = 0
     @State private var isPlaying = false
     @State private var showPermissionAlert = false
+    @State private var wantsTranscription = false
+    @State private var isTranscribing = false
+    @State private var editableTranscription = ""
     @StateObject private var playbackManager = RecordingPlaybackManager()
     @FocusState private var isTitleFocused: Bool
+    @FocusState private var isTranscriptionFocused: Bool
 
     private let recorder = VoiceRecorderService.shared
 
@@ -143,6 +148,69 @@ struct VoiceRecordingView: View {
             }
             .padding(.horizontal, 16)
 
+            // Transcription toggle
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Transcribe audio")
+                        .font(.system(size: 12, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    Spacer()
+
+                    if isTranscribing {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Toggle("", isOn: $wantsTranscription)
+                            .labelsHidden()
+                            .tint(Color.primaryTextColor)
+                    }
+                }
+
+                // Editable transcription
+                if wantsTranscription {
+                    if isTranscribing {
+                        Text("Transcribing...")
+                            .font(.system(size: 13, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+                            .italic()
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.appBackgroundColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    } else if !editableTranscription.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Edit if needed")
+                                .font(.system(size: 10, design: .serif))
+                                .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+
+                            TextEditor(text: $editableTranscription)
+                                .font(.system(.body, design: .serif))
+                                .foregroundStyle(Color.primaryTextColor)
+                                .focused($isTranscriptionFocused)
+                                .scrollContentBackground(.hidden)
+                                .padding(8)
+                                .frame(minHeight: 80, maxHeight: 120)
+                                .background(Color.appBackgroundColor)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .onChange(of: editableTranscription) { _, newValue in
+                                    transcription = newValue.isEmpty ? nil : newValue
+                                }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .onChange(of: wantsTranscription) { _, shouldTranscribe in
+                if shouldTranscribe && editableTranscription.isEmpty && transcription == nil {
+                    // Only transcribe if we don't already have one
+                    performTranscription()
+                } else if !shouldTranscribe {
+                    editableTranscription = ""
+                    transcription = nil
+                }
+            }
+
             // Playback controls
             HStack(spacing: 16) {
                 // Play button
@@ -192,9 +260,44 @@ struct VoiceRecordingView: View {
             }
         }
         .onAppear {
-            // Focus title field when recording is done
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                isTitleFocused = true
+            // If we already have a transcription, restore the state
+            if let existingTranscription = transcription, !existingTranscription.isEmpty {
+                editableTranscription = existingTranscription
+                wantsTranscription = true
+            }
+
+            // Focus title field when recording is done (only if no title yet)
+            if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isTitleFocused = true
+                }
+            }
+        }
+    }
+
+    private func performTranscription() {
+        guard let url = audioURL else { return }
+
+        isTranscribing = true
+
+        Task {
+            if let text = await recorder.transcribe(audioURL: url) {
+                await MainActor.run {
+                    editableTranscription = text
+                    transcription = text
+                    isTranscribing = false
+
+                    // Auto-fill title if empty
+                    if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        title = text
+                    }
+                }
+            } else {
+                await MainActor.run {
+                    editableTranscription = ""
+                    isTranscribing = false
+                    wantsTranscription = false
+                }
             }
         }
     }
@@ -301,13 +404,13 @@ private class RecordingPlaybackManager: NSObject, ObservableObject, AVAudioPlaye
 }
 
 #Preview("Ready") {
-    VoiceRecordingView(audioFileName: .constant(nil), title: .constant(""))
+    VoiceRecordingView(audioFileName: .constant(nil), title: .constant(""), transcription: .constant(nil))
         .padding()
         .background(Color.appBackgroundColor)
 }
 
 #Preview("Has Recording") {
-    VoiceRecordingView(audioFileName: .constant("test.m4a"), title: .constant("My learning"))
+    VoiceRecordingView(audioFileName: .constant("test.m4a"), title: .constant("My learning"), transcription: .constant(nil))
         .padding()
         .background(Color.appBackgroundColor)
 }

@@ -36,6 +36,12 @@ final class LearningEntry {
     var simplificationAudioFileName: String?
     var questionAudioFileName: String?
 
+    // Optional transcription of voice content
+    var transcription: String?
+
+    // Favorites
+    var isFavorite: Bool = false
+
     init(
         content: String,
         date: Date = Date(),
@@ -58,6 +64,10 @@ final class LearningEntry {
         self.nextReviewDate = Calendar.current.date(byAdding: .day, value: 1, to: Date())
         self.reviewInterval = 1
         self.reviewCount = 0
+
+        // Transcription and favorites defaults
+        self.transcription = nil
+        self.isFavorite = false
     }
 }
 

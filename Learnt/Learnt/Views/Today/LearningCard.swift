@@ -10,6 +10,8 @@ struct LearningCard: View {
     let onEdit: () -> Void
     let onAddReflection: () -> Void
     let onDelete: () -> Void
+    let onShare: () -> Void
+    let onToggleFavorite: () -> Void
 
     @State private var isExpanded = false
 
@@ -88,11 +90,18 @@ struct LearningCard: View {
                 }
             }
 
-            // Expand indicator
-            Image(systemName: "chevron.down")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
-                .rotationEffect(.degrees(isExpanded ? -180 : 0))
+            // Favorite indicator + expand indicator
+            VStack(spacing: 8) {
+                if entry.isFavorite {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                    .rotationEffect(.degrees(isExpanded ? -180 : 0))
+            }
         }
     }
 
@@ -135,6 +144,22 @@ struct LearningCard: View {
                 .buttonStyle(.plain)
 
                 Spacer()
+
+                // Favorite button
+                Button(action: onToggleFavorite) {
+                    Image(systemName: entry.isFavorite ? "heart.fill" : "heart")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+                .buttonStyle(.plain)
+
+                // Share button
+                Button(action: onShare) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+                .buttonStyle(.plain)
 
                 Button(action: onDelete) {
                     Text("Delete")
@@ -223,7 +248,9 @@ struct LearningCard: View {
                 }(),
                 onEdit: {},
                 onAddReflection: {},
-                onDelete: {}
+                onDelete: {},
+                onShare: {},
+                onToggleFavorite: {}
             )
 
             // Entry with reflections
@@ -238,20 +265,25 @@ struct LearningCard: View {
                 }(),
                 onEdit: {},
                 onAddReflection: {},
-                onDelete: {}
+                onDelete: {},
+                onShare: {},
+                onToggleFavorite: {}
             )
 
-            // Long entry
+            // Favorited entry
             LearningCard(
                 entry: {
                     let entry = LearningEntry(
-                        content: "The Feynman technique for learning: If you can't explain something simply, you don't understand it well enough. Break it down, find the gaps, and fill them in."
+                        content: "The Feynman technique for learning: If you can't explain something simply, you don't understand it well enough."
                     )
+                    entry.isFavorite = true
                     return entry
                 }(),
                 onEdit: {},
                 onAddReflection: {},
-                onDelete: {}
+                onDelete: {},
+                onShare: {},
+                onToggleFavorite: {}
             )
         }
         .padding()

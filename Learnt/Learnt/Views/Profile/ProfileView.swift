@@ -10,6 +10,8 @@ struct ProfileView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var entries: [LearningEntry]
     @State private var showClearDataAlert = false
+    @State private var showWrapped = false
+    @State private var showStreakShare = false
 
     // MARK: - Computed Stats
 
@@ -79,6 +81,66 @@ struct ProfileView: View {
         }
     }
 
+    private var longestStreak: Int {
+        guard !entries.isEmpty else { return 0 }
+
+        let datesWithEntries = Set(entries.map { $0.date.startOfDay }).sorted()
+        guard let firstDate = datesWithEntries.first else { return 0 }
+
+        var longest = 1
+        var current = 1
+        var previousDate = firstDate
+
+        for date in datesWithEntries.dropFirst() {
+            if Calendar.current.isDate(date, inSameDayAs: previousDate.tomorrow) {
+                current += 1
+                longest = max(longest, current)
+            } else {
+                current = 1
+            }
+            previousDate = date
+        }
+
+        return longest
+    }
+
+    private var topCategories: [(name: String, icon: String, count: Int)] {
+        var categoryCount: [String: (icon: String, count: Int)] = [:]
+
+        for entry in entries {
+            for category in entry.categories {
+                if let existing = categoryCount[category.name] {
+                    categoryCount[category.name] = (category.icon, existing.count + 1)
+                } else {
+                    categoryCount[category.name] = (category.icon, 1)
+                }
+            }
+        }
+
+        return categoryCount
+            .map { (name: $0.key, icon: $0.value.icon, count: $0.value.count) }
+            .sorted { $0.count > $1.count }
+    }
+
+    private var wrappedData: WrappedData {
+        let calendar = Calendar.current
+        let currentMonth = calendar.component(.month, from: Date())
+        let currentYear = calendar.component(.year, from: Date())
+
+        let monthFormatter = DateFormatter()
+        monthFormatter.dateFormat = "MMMM yyyy"
+
+        return WrappedData(
+            period: monthFormatter.string(from: Date()),
+            totalLearnings: totalEntries,
+            totalDays: totalDays,
+            topCategories: topCategories,
+            mostActiveDay: "Monday", // TODO: Calculate actual most active day
+            currentStreak: currentStreak,
+            longestStreak: longestStreak
+        )
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -90,6 +152,11 @@ struct ProfileView: View {
                     // Review stats
                     if totalEntries > 0 {
                         reviewStatsSection
+                    }
+
+                    // Share section
+                    if totalEntries > 0 {
+                        shareSection
                     }
 
                     Divider()
@@ -114,7 +181,70 @@ struct ProfileView: View {
             } message: {
                 Text("This will permanently delete all \(entries.count) learnings. This cannot be undone.")
             }
+            .fullScreenCover(isPresented: $showWrapped) {
+                WrappedView(data: wrappedData) { cardIndex in
+                    // Share the wrapped card
+                    shareWrappedCard(at: cardIndex)
+                }
+            }
+            .sheet(isPresented: $showStreakShare) {
+                StreakShareSheet(streakDays: currentStreak, totalLearnings: totalEntries)
+            }
         }
+    }
+
+    // MARK: - Share Section
+
+    private var shareSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Share")
+                .font(.system(.subheadline, design: .serif, weight: .medium))
+                .foregroundStyle(Color.secondaryTextColor)
+
+            HStack(spacing: 12) {
+                // Your Month button
+                Button(action: { showWrapped = true }) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.primaryTextColor)
+
+                        Text("Your Month")
+                            .font(.system(size: 12, design: .serif))
+                            .foregroundStyle(Color.primaryTextColor)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                // Share Streak button
+                Button(action: { showStreakShare = true }) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "flame")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.primaryTextColor)
+
+                        Text("Share Streak")
+                            .font(.system(size: 12, design: .serif))
+                            .foregroundStyle(Color.primaryTextColor)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .disabled(currentStreak == 0)
+                .opacity(currentStreak == 0 ? 0.5 : 1)
+            }
+        }
+    }
+
+    private func shareWrappedCard(at index: Int) {
+        // TODO: Implement rendering specific wrapped card to image and sharing
     }
 
     // MARK: - Main Stats

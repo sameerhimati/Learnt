@@ -11,73 +11,57 @@ struct CalendarOverlay: View {
     let onDateSelected: (Date) -> Void
     let onDismiss: () -> Void
 
-    @State private var displayedMonth: Date
+    // Range: 5 years back, 6 months forward
+    private let monthsBack = 60
+    private let monthsForward = 6
 
-    init(
-        selectedDate: Date,
-        datesWithEntries: Set<Date>,
-        onDateSelected: @escaping (Date) -> Void,
-        onDismiss: @escaping () -> Void
-    ) {
-        self.selectedDate = selectedDate
-        self.datesWithEntries = datesWithEntries
-        self.onDateSelected = onDateSelected
-        self.onDismiss = onDismiss
-        self._displayedMonth = State(initialValue: selectedDate)
+    private var months: [Date] {
+        let today = Date()
+        return (-monthsBack...monthsForward).map { offset in
+            today.adding(months: offset).startOfMonth
+        }
+    }
+
+    private var initialScrollMonth: Date {
+        // Start on the month of the currently selected date in Today view
+        selectedDate.startOfMonth
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Current displayed month
-                    MonthView(
-                        month: displayedMonth,
-                        selectedDate: selectedDate,
-                        datesWithEntries: datesWithEntries,
-                        onDateSelected: onDateSelected
-                    )
-
-                    // Next month below
-                    MonthView(
-                        month: displayedMonth.adding(months: 1),
-                        selectedDate: selectedDate,
-                        datesWithEntries: datesWithEntries,
-                        onDateSelected: onDateSelected
-                    )
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 24) {
+                        ForEach(months, id: \.self) { month in
+                            MonthView(
+                                month: month,
+                                selectedDate: selectedDate,
+                                datesWithEntries: datesWithEntries,
+                                onDateSelected: onDateSelected
+                            )
+                            .id(month)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 24)
+                .onAppear {
+                    // Scroll to selected month without animation
+                    proxy.scrollTo(initialScrollMonth, anchor: .top)
+                }
             }
             .background(Color.appBackgroundColor)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { displayedMonth = displayedMonth.adding(months: -1) }) {
-                        Image(systemName: "chevron.left")
-                            .foregroundStyle(Color.primaryTextColor)
-                    }
+                    Text("Calendar")
+                        .font(.system(.headline, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        // Allow navigating up to 1 year into the future
-                        let maxFutureMonth = Date().adding(months: 12).startOfMonth
-                        Button(action: {
-                            displayedMonth = displayedMonth.adding(months: 1)
-                        }) {
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(
-                                    displayedMonth.adding(months: 1).startOfMonth <= maxFutureMonth
-                                    ? Color.primaryTextColor
-                                    : Color.secondaryTextColor
-                                )
-                        }
-                        .disabled(displayedMonth.adding(months: 1).startOfMonth > maxFutureMonth)
-
-                        Button(action: onDismiss) {
-                            Image(systemName: "xmark")
-                                .foregroundStyle(Color.primaryTextColor)
-                        }
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .foregroundStyle(Color.primaryTextColor)
                     }
                 }
             }

@@ -11,7 +11,7 @@ enum InputMode: String, CaseIterable {
 }
 
 struct AddLearningView: View {
-    let onSave: (String, String?, String?, String?, String?, [Category], String?) -> Void
+    let onSave: (String, String?, String?, String?, String?, [Category], String?, String?) -> Void
     let onCancel: () -> Void
 
     // For editing existing entry
@@ -22,6 +22,7 @@ struct AddLearningView: View {
     var initialQuestion: String? = nil
     var initialCategories: [Category] = []
     var initialContentAudioFileName: String? = nil
+    var initialTranscription: String? = nil
 
     @State private var inputMode: InputMode = .text
     @State private var content: String = ""
@@ -32,6 +33,7 @@ struct AddLearningView: View {
     @State private var showReflections = false
     @State private var selectedCategories: [Category] = []
     @State private var contentAudioFileName: String?
+    @State private var transcription: String?
 
     @FocusState private var focusedField: Field?
 
@@ -94,6 +96,7 @@ struct AddLearningView: View {
             question = initialQuestion ?? ""
             selectedCategories = initialCategories
             contentAudioFileName = initialContentAudioFileName
+            transcription = initialTranscription
             showReflections = hasReflections
 
             // Set initial input mode based on existing content
@@ -153,7 +156,7 @@ struct AddLearningView: View {
             if inputMode == .text {
                 textInputView
             } else {
-                VoiceRecordingView(audioFileName: $contentAudioFileName, title: $content)
+                VoiceRecordingView(audioFileName: $contentAudioFileName, title: $content, transcription: $transcription)
             }
         }
     }
@@ -309,13 +312,13 @@ struct AddLearningView: View {
         let sim = simplification.isEmpty ? nil : simplification.trimmingCharacters(in: .whitespacesAndNewlines)
         let que = question.isEmpty ? nil : question.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        onSave(trimmedContent, app, sur, sim, que, selectedCategories, contentAudioFileName)
+        onSave(trimmedContent, app, sur, sim, que, selectedCategories, contentAudioFileName, transcription)
     }
 }
 
 #Preview("New Learning") {
     AddLearningView(
-        onSave: { _, _, _, _, _, _, _ in },
+        onSave: { _, _, _, _, _, _, _, _ in },
         onCancel: {}
     )
     .modelContainer(for: [LearningEntry.self, Category.self], inMemory: true)
@@ -323,7 +326,7 @@ struct AddLearningView: View {
 
 #Preview("Edit Learning") {
     AddLearningView(
-        onSave: { _, _, _, _, _, _, _ in },
+        onSave: { _, _, _, _, _, _, _, _ in },
         onCancel: {},
         initialContent: "SwiftUI animations make interfaces feel responsive",
         initialApplication: "Use in my next project",

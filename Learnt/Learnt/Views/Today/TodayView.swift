@@ -18,6 +18,7 @@ struct TodayView: View {
     @State private var reflectingEntry: LearningEntry?
     @State private var entryToDelete: LearningEntry?
     @State private var isQuoteHidden = QuoteService.shared.isQuoteHidden
+    @State private var entryToShare: LearningEntry?
 
     private let quoteService = QuoteService.shared
 
@@ -132,11 +133,12 @@ struct TodayView: View {
         }
         .sheet(isPresented: $showAddLearning) {
             AddLearningView(
-                onSave: { content, app, sur, sim, que, categories, audioFileName in
+                onSave: { content, app, sur, sim, que, categories, audioFileName, transcription in
                     entryStore.createEntry(content: content, for: selectedDate)
                     if let entry = entryStore.entries(for: selectedDate).last {
                         entry.categories = categories
                         entry.contentAudioFileName = audioFileName
+                        entry.transcription = transcription
                         if app != nil || sur != nil || sim != nil || que != nil {
                             entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
                         }
@@ -148,10 +150,11 @@ struct TodayView: View {
         }
         .sheet(item: $editingEntry) { entry in
             AddLearningView(
-                onSave: { content, app, sur, sim, que, categories, audioFileName in
+                onSave: { content, app, sur, sim, que, categories, audioFileName, transcription in
                     entryStore.updateEntry(entry, content: content)
                     entry.categories = categories
                     entry.contentAudioFileName = audioFileName
+                    entry.transcription = transcription
                     entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
                     editingEntry = nil
                 },
@@ -162,15 +165,17 @@ struct TodayView: View {
                 initialSimplification: entry.simplification,
                 initialQuestion: entry.question,
                 initialCategories: entry.categories,
-                initialContentAudioFileName: entry.contentAudioFileName
+                initialContentAudioFileName: entry.contentAudioFileName,
+                initialTranscription: entry.transcription
             )
         }
         .sheet(item: $reflectingEntry) { entry in
             AddLearningView(
-                onSave: { content, app, sur, sim, que, categories, audioFileName in
+                onSave: { content, app, sur, sim, que, categories, audioFileName, transcription in
                     entryStore.updateEntry(entry, content: content)
                     entry.categories = categories
                     entry.contentAudioFileName = audioFileName
+                    entry.transcription = transcription
                     entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
                     reflectingEntry = nil
                 },
@@ -181,7 +186,8 @@ struct TodayView: View {
                 initialSimplification: entry.simplification,
                 initialQuestion: entry.question,
                 initialCategories: entry.categories,
-                initialContentAudioFileName: entry.contentAudioFileName
+                initialContentAudioFileName: entry.contentAudioFileName,
+                initialTranscription: entry.transcription
             )
         }
         .sheet(isPresented: $showShareSheet) {
@@ -202,6 +208,9 @@ struct TodayView: View {
             }
         } message: {
             Text("This learning will be permanently deleted.")
+        }
+        .sheet(item: $entryToShare) { entry in
+            ShareEntrySheet(entry: entry)
         }
     }
 
@@ -264,7 +273,12 @@ struct TodayView: View {
                         entry: entry,
                         onEdit: { editingEntry = entry },
                         onAddReflection: { reflectingEntry = entry },
-                        onDelete: { entryToDelete = entry }
+                        onDelete: { entryToDelete = entry },
+                        onShare: { entryToShare = entry },
+                        onToggleFavorite: {
+                            entry.isFavorite.toggle()
+                            entry.updatedAt = Date()
+                        }
                     )
                 }
             }
