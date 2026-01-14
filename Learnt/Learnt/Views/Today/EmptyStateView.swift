@@ -28,6 +28,14 @@ struct EmptyStateView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .coachMark(
+                    .addLearning,
+                    title: "Add a Learning",
+                    message: "Tap here to capture something you learned today. Use voice or text.",
+                    arrowDirection: .up,
+                    alignment: .bottom,
+                    offset: CGSize(width: 0, height: 16)
+                )
             }
 
             Spacer()

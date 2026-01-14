@@ -98,6 +98,14 @@ struct TodayView: View {
                     entriesListView
                 }
             }
+            .coachMark(
+                .navigateDays,
+                title: "Browse Your History",
+                message: "Swipe left or right to see previous days, or tap the calendar icon.",
+                arrowDirection: .none,
+                alignment: .center,
+                offset: CGSize(width: 0, height: 0)
+            )
 
             // Floating + button (bottom right) - only when there are entries
             if !entriesForSelectedDate.isEmpty {
@@ -280,7 +288,7 @@ struct TodayView: View {
                     )
                 }
 
-                ForEach(entriesForSelectedDate) { entry in
+                ForEach(Array(entriesForSelectedDate.enumerated()), id: \.element.id) { index, entry in
                     LearningCard(
                         entry: entry,
                         onEdit: { editingEntry = entry },
@@ -292,6 +300,7 @@ struct TodayView: View {
                             entry.updatedAt = Date()
                         }
                     )
+                    .modifier(FirstCardCoachMark(isFirstCard: index == 0))
                 }
             }
             .padding(.horizontal, 16)
@@ -326,6 +335,28 @@ struct TodayView: View {
         }
     }
 
+}
+
+// MARK: - First Card Coach Mark
+
+private struct FirstCardCoachMark: ViewModifier {
+    let isFirstCard: Bool
+
+    func body(content: Content) -> some View {
+        if isFirstCard {
+            content
+                .coachMark(
+                    .expandCard,
+                    title: "Tap to Expand",
+                    message: "Tap any card to see details, edit, add reflections, or share.",
+                    arrowDirection: .up,
+                    alignment: .bottom,
+                    offset: CGSize(width: 0, height: 16)
+                )
+        } else {
+            content
+        }
+    }
 }
 
 #Preview {

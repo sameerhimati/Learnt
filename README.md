@@ -8,10 +8,16 @@ A minimal iOS app for tracking daily learnings.
 
 ## Features
 
-- **One entry per day** - Constraint creates habit
+- **Multiple entries per day** - Capture learnings whenever they happen
 - **Voice or text input** - Capture thoughts however feels natural
+- **Spaced repetition** - Review at optimal intervals for long-term retention
 - **Weekly activity dots** - See your consistency at a glance
-- **Monthly summaries** - AI finds patterns in your learnings (v2+)
+- **Monthly summaries** - Track your learning journey with "Your Month"
+
+## Links
+
+- [Privacy Policy](https://sameerhimati.github.io/Learnt/privacy.html)
+- [Support](https://sameerhimati.github.io/Learnt/support.html)
 
 ## Requirements
 

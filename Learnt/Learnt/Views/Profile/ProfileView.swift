@@ -446,6 +446,14 @@ struct ProfileView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
+                .coachMark(
+                    .yourMonth,
+                    title: "Your Month",
+                    message: "View your monthly learning summary with stats and AI insights.",
+                    arrowDirection: .down,
+                    alignment: .top,
+                    offset: CGSize(width: 0, height: -16)
+                )
 
                 // Share Streak button
                 Button(action: { showStreakShare = true }) {
