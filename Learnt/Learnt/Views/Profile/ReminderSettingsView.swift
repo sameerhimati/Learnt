@@ -33,19 +33,20 @@ struct ReminderSettingsView: View {
                     .tint(Color.primaryTextColor)
 
                     if captureEnabled {
-                        VStack(alignment: .leading, spacing: 8) {
+                        HStack {
                             Text("Time")
-                                .font(.system(.caption, design: .serif))
+                                .font(.system(.body, design: .serif))
                                 .foregroundStyle(Color.secondaryTextColor)
+
+                            Spacer()
 
                             DatePicker(
                                 "",
                                 selection: $captureTime,
                                 displayedComponents: .hourAndMinute
                             )
-                            .datePickerStyle(.wheel)
+                            .datePickerStyle(.compact)
                             .labelsHidden()
-                            .frame(height: 150)
                         }
                     }
                 }
@@ -68,19 +69,20 @@ struct ReminderSettingsView: View {
                     .tint(Color.primaryTextColor)
 
                     if reviewEnabled {
-                        VStack(alignment: .leading, spacing: 8) {
+                        HStack {
                             Text("Time")
-                                .font(.system(.caption, design: .serif))
+                                .font(.system(.body, design: .serif))
                                 .foregroundStyle(Color.secondaryTextColor)
+
+                            Spacer()
 
                             DatePicker(
                                 "",
                                 selection: $reviewTime,
                                 displayedComponents: .hourAndMinute
                             )
-                            .datePickerStyle(.wheel)
+                            .datePickerStyle(.compact)
                             .labelsHidden()
-                            .frame(height: 150)
                         }
                     }
                 }

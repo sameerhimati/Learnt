@@ -64,21 +64,16 @@ struct OnboardingView: View {
 
     private var welcomePage: some View {
         VStack(spacing: 24) {
-            Image(systemName: "lightbulb")
-                .font(.system(size: 64, weight: .light))
+            Text("Learnt")
+                .font(.system(size: 56, weight: .regular, design: .serif))
+                .italic()
                 .foregroundStyle(Color.primaryTextColor)
 
-            VStack(spacing: 12) {
-                Text("Welcome to Learnt")
-                    .font(.system(size: 28, weight: .medium, design: .serif))
-                    .foregroundStyle(Color.primaryTextColor)
-
-                Text("Capture the things you learn,\none moment at a time.")
-                    .font(.system(size: 17, weight: .regular, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
+            Text("Capture the things you learn,\none moment at a time.")
+                .font(.system(size: 17, weight: .regular, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
         }
         .padding(.horizontal, 32)
     }
