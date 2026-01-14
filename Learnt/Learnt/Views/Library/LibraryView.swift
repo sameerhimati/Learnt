@@ -1,0 +1,645 @@
+//
+//  LibraryView.swift
+//  Learnt
+//
+
+import SwiftUI
+import SwiftData
+import AVFoundation
+
+struct LibraryView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Query private var allEntries: [LearningEntry]
+    @Query private var allCategories: [Category]
+
+    @State private var searchText = ""
+    @State private var filter: LibraryFilter = .all
+    @State private var selectedCategory: Category?
+    @State private var selectedEntry: LearningEntry?
+
+    enum LibraryFilter: String, CaseIterable {
+        case all = "All"
+        case favorites = "Favorites"
+        case graduated = "Graduated"
+    }
+
+    private var filteredEntries: [LearningEntry] {
+        var entries = allEntries
+
+        // Apply filter
+        switch filter {
+        case .all:
+            break
+        case .favorites:
+            entries = entries.filter { $0.isFavorite }
+        case .graduated:
+            entries = entries.filter { $0.isGraduated }
+        }
+
+        // Apply category filter
+        if let category = selectedCategory {
+            entries = entries.filter { $0.categories.contains(category) }
+        }
+
+        // Apply search
+        if !searchText.isEmpty {
+            entries = entries.filter {
+                $0.content.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+
+        // Sort by date (newest first)
+        return entries.sorted { $0.date > $1.date }
+    }
+
+    private var categoriesWithCounts: [(category: Category, count: Int)] {
+        allCategories.map { category in
+            let count = allEntries.filter { $0.categories.contains(category) }.count
+            return (category, count)
+        }.filter { $0.count > 0 }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Search bar
+                    searchBar
+
+                    // Filter chips
+                    filterChips
+
+                    // Category chips (if any)
+                    if !categoriesWithCounts.isEmpty {
+                        categoryChips
+                    }
+
+                    // Entries list
+                    if filteredEntries.isEmpty {
+                        emptyState
+                    } else {
+                        entriesList
+                    }
+                }
+                .padding(16)
+            }
+            .background(Color.appBackgroundColor)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Library")
+                        .font(.system(.subheadline, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.primaryTextColor)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color.primaryTextColor)
+                    }
+                }
+            }
+            .sheet(item: $selectedEntry) { entry in
+                LibraryEntryDetailView(entry: entry)
+            }
+        }
+    }
+
+    // MARK: - Search Bar
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.secondaryTextColor)
+
+            TextField("Search learnings...", text: $searchText)
+                .font(.system(.body, design: .serif))
+                .foregroundStyle(Color.primaryTextColor)
+        }
+        .padding(12)
+        .background(Color.inputBackgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: - Filter Chips
+
+    private var filterChips: some View {
+        HStack(spacing: 8) {
+            ForEach(LibraryFilter.allCases, id: \.self) { filterOption in
+                Button(action: { filter = filterOption }) {
+                    Text(filterOption.rawValue)
+                        .font(.system(.subheadline, design: .serif, weight: filter == filterOption ? .medium : .regular))
+                        .foregroundStyle(filter == filterOption ? Color.appBackgroundColor : Color.primaryTextColor)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(filter == filterOption ? Color.primaryTextColor : Color.inputBackgroundColor)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Category Chips
+
+    private var categoryChips: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Categories")
+                .font(.system(size: 12, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    // "All" chip to clear category filter
+                    if selectedCategory != nil {
+                        Button(action: { selectedCategory = nil }) {
+                            Text("All")
+                                .font(.system(size: 13, design: .serif))
+                                .foregroundStyle(Color.secondaryTextColor)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.inputBackgroundColor)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    ForEach(categoriesWithCounts, id: \.category.id) { item in
+                        Button(action: { selectedCategory = item.category }) {
+                            HStack(spacing: 4) {
+                                Text(item.category.name)
+                                Text("(\(item.count))")
+                                    .foregroundStyle(Color.secondaryTextColor)
+                            }
+                            .font(.system(size: 13, design: .serif))
+                            .foregroundStyle(selectedCategory == item.category ? Color.appBackgroundColor : Color.primaryTextColor)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(selectedCategory == item.category ? Color.primaryTextColor : Color.inputBackgroundColor)
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Spacer()
+                .frame(height: 60)
+
+            Image(systemName: "books.vertical")
+                .font(.system(size: 40))
+                .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+
+            Text(emptyStateMessage)
+                .font(.system(.body, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor)
+                .multilineTextAlignment(.center)
+
+            Spacer()
+        }
+    }
+
+    private var emptyStateMessage: String {
+        if !searchText.isEmpty {
+            return "No learnings match your search"
+        }
+        switch filter {
+        case .all:
+            return "No learnings yet"
+        case .favorites:
+            return "No favorite learnings yet"
+        case .graduated:
+            return "No graduated learnings yet"
+        }
+    }
+
+    // MARK: - Entries List
+
+    private var entriesList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(filteredEntries.enumerated()), id: \.element.id) { index, entry in
+                Button(action: { selectedEntry = entry }) {
+                    LibraryEntryRow(entry: entry)
+                }
+                .buttonStyle(.plain)
+
+                if index < filteredEntries.count - 1 {
+                    Divider()
+                        .background(Color.dividerColor)
+                        .padding(.leading, 16)
+                }
+            }
+        }
+        .background(Color.inputBackgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Entry Row
+
+struct LibraryEntryRow: View {
+    let entry: LearningEntry
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(entry.previewText)
+                    .font(.system(.body, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+                    .lineLimit(2)
+
+                HStack(spacing: 8) {
+                    Text(entry.date.formattedShort)
+                        .font(.system(size: 12, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    if !entry.categories.isEmpty {
+                        Text(entry.categories.first?.name ?? "")
+                            .font(.system(size: 11, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                    }
+                }
+            }
+
+            Spacer()
+
+            if entry.isFavorite {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primaryTextColor)
+            }
+
+            if entry.isGraduated {
+                Image(systemName: "checkmark.seal")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.secondaryTextColor)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+}
+
+// MARK: - Entry Detail View
+
+struct LibraryEntryDetailView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    let entry: LearningEntry
+
+    @StateObject private var audioPlayer = LibraryAudioPlayer()
+
+    @State private var showEditSheet = false
+    @State private var showDeleteAlert = false
+    @State private var showShareSheet = false
+
+    private var audioURL: URL? {
+        guard let fileName = entry.contentAudioFileName else { return nil }
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return documentsPath.appendingPathComponent(fileName)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    viewModeContent
+
+                    // Delete button
+                    Button(action: { showDeleteAlert = true }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 14))
+                            Text("Delete Learning")
+                                .font(.system(.body, design: .serif))
+                        }
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.inputBackgroundColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
+                }
+                .padding(16)
+            }
+            .background(Color.appBackgroundColor)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    HStack(spacing: 16) {
+                        Button(action: { showEditSheet = true }) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color.primaryTextColor)
+                        }
+                        Button(action: { showShareSheet = true }) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color.primaryTextColor)
+                        }
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color.primaryTextColor)
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .onDisappear {
+            audioPlayer.stop()
+        }
+        .sheet(isPresented: $showEditSheet) {
+            AddLearningView(
+                onSave: { content, application, surprise, simplification, question, categories, audioFileName, transcription in
+                    updateEntry(
+                        content: content,
+                        application: application,
+                        surprise: surprise,
+                        simplification: simplification,
+                        question: question,
+                        categories: categories,
+                        audioFileName: audioFileName,
+                        transcription: transcription
+                    )
+                    showEditSheet = false
+                },
+                onCancel: { showEditSheet = false },
+                initialContent: entry.content,
+                initialApplication: entry.application,
+                initialSurprise: entry.surprise,
+                initialSimplification: entry.simplification,
+                initialQuestion: entry.question,
+                initialCategories: entry.categories,
+                initialContentAudioFileName: entry.contentAudioFileName,
+                initialTranscription: entry.transcription
+            )
+        }
+        .alert("Delete Learning?", isPresented: $showDeleteAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                deleteLearning()
+            }
+        } message: {
+            Text("This will permanently delete this learning. This cannot be undone.")
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareEntrySheet(entry: entry)
+        }
+    }
+
+    // MARK: - View Mode
+
+    private var viewModeContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            // Main content card
+            VStack(alignment: .leading, spacing: 16) {
+                Text(entry.content)
+                    .font(.system(.title3, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+                    .lineSpacing(6)
+
+                // Audio playback if available
+                if let url = audioURL {
+                    Button(action: { audioPlayer.toggle(url: url) }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: audioPlayer.isPlaying ? "stop.fill" : "play.fill")
+                                .font(.system(size: 12))
+                            Text(audioPlayer.isPlaying ? "Stop" : "Play audio")
+                                .font(.system(size: 13, design: .serif))
+                        }
+                        .foregroundStyle(Color.primaryTextColor)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.appBackgroundColor)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.inputBackgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+
+            // Metadata row
+            HStack(spacing: 12) {
+                Label(entry.date.formattedFull, systemImage: "calendar")
+
+                if entry.isFavorite {
+                    Label("Favorite", systemImage: "heart.fill")
+                }
+
+                if entry.isGraduated {
+                    Label("Graduated", systemImage: "checkmark.seal")
+                }
+            }
+            .font(.system(size: 12, design: .serif))
+            .foregroundStyle(Color.secondaryTextColor)
+
+            // Categories
+            if !entry.categories.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(entry.categories) { category in
+                        HStack(spacing: 4) {
+                            Image(systemName: category.icon)
+                                .font(.system(size: 10))
+                            Text(category.name)
+                                .font(.system(size: 12, design: .serif))
+                        }
+                        .foregroundStyle(Color.secondaryTextColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.inputBackgroundColor)
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+
+            // Reflections
+            if entry.hasReflections {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Reflections")
+                        .font(.system(.subheadline, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        if let app = entry.application {
+                            reflectionRow(icon: "lightbulb", label: "Apply", content: app)
+                        }
+                        if let sur = entry.surprise {
+                            reflectionRow(icon: "exclamationmark.circle", label: "Surprised", content: sur)
+                        }
+                        if let sim = entry.simplification {
+                            reflectionRow(icon: "text.quote", label: "Simply", content: sim)
+                        }
+                        if let que = entry.question {
+                            reflectionRow(icon: "questionmark.circle", label: "Question", content: que)
+                        }
+                    }
+                    .padding(16)
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+
+            // Review progress
+            if entry.reviewCount > 0 || entry.isGraduated {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Review Progress")
+                        .font(.system(.subheadline, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    HStack(spacing: 24) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(entry.reviewCount)")
+                                .font(.system(.title3, design: .serif, weight: .medium))
+                                .foregroundStyle(Color.primaryTextColor)
+                            Text("Reviews")
+                                .font(.system(size: 11, design: .serif))
+                                .foregroundStyle(Color.secondaryTextColor)
+                        }
+
+                        if entry.isGraduated {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color.primaryTextColor)
+                                Text("Graduated")
+                                    .font(.system(size: 11, design: .serif))
+                                    .foregroundStyle(Color.secondaryTextColor)
+                            }
+                        } else if let nextReview = entry.nextReviewDate {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(nextReview.formattedShort)
+                                    .font(.system(.title3, design: .serif, weight: .medium))
+                                    .foregroundStyle(Color.primaryTextColor)
+                                Text("Next review")
+                                    .font(.system(size: 11, design: .serif))
+                                    .foregroundStyle(Color.secondaryTextColor)
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+    }
+
+    private func reflectionRow(icon: String, label: String, content: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.secondaryTextColor)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 11, weight: .medium, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+
+                Text(content)
+                    .font(.system(size: 14, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func updateEntry(
+        content: String,
+        application: String?,
+        surprise: String?,
+        simplification: String?,
+        question: String?,
+        categories: [Category],
+        audioFileName: String?,
+        transcription: String?
+    ) {
+        entry.content = content
+        entry.application = application
+        entry.surprise = surprise
+        entry.simplification = simplification
+        entry.question = question
+        entry.categories = categories
+        entry.contentAudioFileName = audioFileName
+        entry.transcription = transcription
+        entry.updatedAt = Date()
+        try? modelContext.save()
+    }
+
+    private func deleteLearning() {
+        // Delete associated audio file if exists
+        if let url = audioURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+
+        modelContext.delete(entry)
+        try? modelContext.save()
+        dismiss()
+    }
+}
+
+// MARK: - Library Audio Player
+
+private class LibraryAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
+    @Published var isPlaying = false
+    private var audioPlayer: AVAudioPlayer?
+
+    func toggle(url: URL) {
+        if isPlaying {
+            stop()
+        } else {
+            play(url: url)
+        }
+    }
+
+    func play(url: URL) {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.delegate = self
+            audioPlayer?.play()
+            isPlaying = true
+        } catch {
+            print("Failed to play audio: \(error)")
+        }
+    }
+
+    func stop() {
+        audioPlayer?.stop()
+        audioPlayer = nil
+        isPlaying = false
+    }
+
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        DispatchQueue.main.async {
+            self.isPlaying = false
+        }
+    }
+}
+
+#Preview {
+    LibraryView()
+        .modelContainer(for: [LearningEntry.self, Category.self], inMemory: true)
+}
