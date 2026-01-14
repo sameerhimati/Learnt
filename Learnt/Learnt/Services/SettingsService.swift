@@ -164,11 +164,18 @@ final class SettingsService {
 
     /// Check if we should show the wrapped prompt this month
     var shouldShowWrappedPrompt: Bool {
+        let calendar = Calendar.current
+        let today = Date()
+        let dayOfMonth = calendar.component(.day, from: today)
+
+        // Only show in first 7 days of the month
+        guard dayOfMonth <= 7 else { return false }
+
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM"
-        let currentMonth = formatter.string(from: Date())
+        let currentMonth = formatter.string(from: today)
 
-        // Only show if it's a new month and we haven't shown yet
+        // Only show if we haven't shown this month yet
         return lastWrappedPromptMonth != currentMonth
     }
 

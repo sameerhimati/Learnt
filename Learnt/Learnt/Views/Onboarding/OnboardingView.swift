@@ -65,8 +65,7 @@ struct OnboardingView: View {
     private var welcomePage: some View {
         VStack(spacing: 24) {
             Text("Learnt")
-                .font(.system(size: 56, weight: .regular, design: .serif))
-                .italic()
+                .font(.system(size: 48, weight: .medium, design: .serif))
                 .foregroundStyle(Color.primaryTextColor)
 
             Text("Capture the things you learn,\none moment at a time.")
