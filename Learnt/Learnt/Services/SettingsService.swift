@@ -25,6 +25,7 @@ final class SettingsService {
         static let monthlyWrappedEnabled = "monthlyWrappedEnabled"
         static let lastWrappedPromptMonth = "lastWrappedPromptMonth"
         static let appearanceMode = "appearanceMode"
+        static let dailyQuotesEnabled = "dailyQuotesEnabled"
     }
 
     // MARK: - Onboarding
@@ -52,6 +53,22 @@ final class SettingsService {
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: Keys.appearanceMode)
+        }
+    }
+
+    // MARK: - Daily Quotes
+
+    /// Whether daily quotes are shown on the Today screen (default: true)
+    var dailyQuotesEnabled: Bool {
+        get {
+            // Default to true if not set
+            if UserDefaults.standard.object(forKey: Keys.dailyQuotesEnabled) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: Keys.dailyQuotesEnabled)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Keys.dailyQuotesEnabled)
         }
     }
 

@@ -22,6 +22,7 @@ struct TodayView: View {
     @State private var showLibrary = false
 
     private let quoteService = QuoteService.shared
+    private var settings: SettingsService { SettingsService.shared }
 
     private var entryStore: EntryStore {
         EntryStore(modelContext: modelContext)
@@ -70,8 +71,8 @@ struct TodayView: View {
                 // Content
                 if entriesForSelectedDate.isEmpty {
                     VStack(spacing: 0) {
-                        // Quote of the day (only on today, when not hidden)
-                        if selectedDate.isToday && !isQuoteHidden {
+                        // Quote of the day (only on today, when enabled and not hidden)
+                        if selectedDate.isToday && settings.dailyQuotesEnabled && !isQuoteHidden {
                             QuoteCard(
                                 quote: quoteService.quoteOfTheDay,
                                 onAddToEntry: { quoteText in
@@ -263,8 +264,8 @@ struct TodayView: View {
     private var entriesListView: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                // Quote of the day (only on today, when not hidden)
-                if selectedDate.isToday && !isQuoteHidden {
+                // Quote of the day (only on today, when enabled and not hidden)
+                if selectedDate.isToday && settings.dailyQuotesEnabled && !isQuoteHidden {
                     QuoteCard(
                         quote: quoteService.quoteOfTheDay,
                         onAddToEntry: { quoteText in

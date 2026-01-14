@@ -605,6 +605,35 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
 
+            // Daily Quotes toggle
+            HStack(spacing: 12) {
+                Image(systemName: "quote.opening")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.secondaryTextColor)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Daily Quotes")
+                        .font(.system(.body, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
+                    Text("Show inspirational quotes on Today")
+                        .font(.system(.caption, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { settings.dailyQuotesEnabled },
+                    set: { settings.dailyQuotesEnabled = $0 }
+                ))
+                .labelsHidden()
+                .tint(Color.primaryTextColor)
+            }
+            .padding(16)
+            .background(Color.inputBackgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
             // Clear data button
             Button(action: { showClearDataAlert = true }) {
                 HStack(spacing: 12) {
