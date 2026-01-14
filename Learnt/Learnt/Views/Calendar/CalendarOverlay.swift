@@ -46,21 +46,24 @@ struct CalendarOverlay: View {
                     .padding(.vertical, 16)
                 }
                 .onAppear {
-                    // Scroll to selected month without animation
-                    proxy.scrollTo(initialScrollMonth, anchor: .top)
+                    // Scroll to selected month with slight delay to ensure content is rendered
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        proxy.scrollTo(initialScrollMonth, anchor: .top)
+                    }
                 }
             }
             .background(Color.appBackgroundColor)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .principal) {
                     Text("Calendar")
-                        .font(.system(.headline, design: .serif))
+                        .font(.system(.subheadline, design: .serif, weight: .medium))
                         .foregroundStyle(Color.primaryTextColor)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
+                            .font(.system(size: 16))
                             .foregroundStyle(Color.primaryTextColor)
                     }
                 }

@@ -12,6 +12,8 @@ struct ReviewView: View {
 
     @State private var showReviewSession = false
 
+    private var settings: SettingsService { SettingsService.shared }
+
     private var entryStore: EntryStore {
         EntryStore(modelContext: modelContext)
     }
@@ -20,17 +22,21 @@ struct ReviewView: View {
         allEntries.filter { $0.isDueForReview }
     }
 
-    private var upcomingReviews: [LearningEntry] {
-        allEntries
-            .filter { $0.nextReviewDate != nil && !$0.isDueForReview }
-            .sorted { ($0.nextReviewDate ?? .distantFuture) < ($1.nextReviewDate ?? .distantFuture) }
-            .prefix(5)
-            .map { $0 }
-    }
-
     private var totalReviewed: Int {
         allEntries.filter { $0.reviewCount > 0 }.count
     }
+
+    private var graduatedCount: Int {
+        allEntries.filter { $0.isGraduated }.count
+    }
+
+    private var nextReviewDate: Date? {
+        allEntries
+            .compactMap { $0.nextReviewDate }
+            .filter { $0 > Date() }
+            .min()
+    }
+
 
     var body: some View {
         NavigationStack {
@@ -39,16 +45,19 @@ struct ReviewView: View {
                     if allEntries.isEmpty {
                         emptyState
                     } else {
+                        // Streak badge (if active)
+                        if settings.reviewStreak > 0 {
+                            streakBadge
+                        }
+
                         // Ready for review section
                         reviewReadySection
 
                         // Stats section
                         statsSection
 
-                        // Upcoming reviews
-                        if !upcomingReviews.isEmpty {
-                            upcomingSection
-                        }
+                        // Science-backed explanation
+                        scienceNote
                     }
                 }
                 .padding(16)
@@ -90,30 +99,49 @@ struct ReviewView: View {
         }
     }
 
+    // MARK: - Streak Badge
+
+    private var streakBadge: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "flame")
+                .font(.system(size: 16))
+            Text("\(settings.reviewStreak)-day streak")
+                .font(.system(.subheadline, design: .serif, weight: .medium))
+        }
+        .foregroundStyle(Color.primaryTextColor)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.inputBackgroundColor)
+        .clipShape(Capsule())
+    }
+
     // MARK: - Review Ready Section
 
     private var reviewReadySection: some View {
         VStack(spacing: 16) {
-            // Count badge
-            HStack {
+            // Hero card with count and status
+            VStack(spacing: 12) {
+                // Main count display
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Ready for review")
                         .font(.system(.subheadline, design: .serif))
                         .foregroundStyle(Color.secondaryTextColor)
 
                     Text("\(dueForReview.count)")
-                        .font(.system(size: 48, weight: .medium, design: .serif))
+                        .font(.system(size: 56, weight: .medium, design: .serif))
                         .foregroundStyle(Color.primaryTextColor)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer()
-
-                if dueForReview.count > 0 {
-                    // Decorative icon
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 24))
-                        .foregroundStyle(Color.secondaryTextColor.opacity(0.3))
+                // Status message
+                HStack(spacing: 8) {
+                    Image(systemName: statusIcon)
+                        .font(.system(size: 12))
+                    Text(statusMessage)
+                        .font(.system(size: 13, design: .serif))
                 }
+                .foregroundStyle(Color.secondaryTextColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(20)
             .background(Color.inputBackgroundColor)
@@ -121,31 +149,64 @@ struct ReviewView: View {
 
             // Start button
             Button(action: { showReviewSession = true }) {
-                Text("Start Review Session")
-                    .font(.system(.body, design: .serif, weight: .medium))
-                    .foregroundStyle(dueForReview.isEmpty ? Color.secondaryTextColor : Color.appBackgroundColor)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(dueForReview.isEmpty ? Color.dividerColor : Color.primaryTextColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                HStack(spacing: 8) {
+                    if dueForReview.count > 0 {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 12))
+                    }
+                    Text(dueForReview.isEmpty ? "No Reviews Due" : "Start Review Session")
+                }
+                .font(.system(.body, design: .serif, weight: .medium))
+                .foregroundStyle(dueForReview.isEmpty ? Color.secondaryTextColor : Color.appBackgroundColor)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(dueForReview.isEmpty ? Color.dividerColor : Color.primaryTextColor)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
             .disabled(dueForReview.isEmpty)
         }
     }
 
+    private var statusIcon: String {
+        if dueForReview.count > 0 {
+            return "sparkles"
+        } else if let next = nextReviewDate {
+            return Calendar.current.isDateInToday(next) ? "clock" : "calendar"
+        } else {
+            return "checkmark.circle"
+        }
+    }
+
+    private var statusMessage: String {
+        if dueForReview.count > 0 {
+            let plural = dueForReview.count == 1 ? "learning is" : "learnings are"
+            return "\(dueForReview.count) \(plural) ready to reinforce"
+        } else if let next = nextReviewDate {
+            if Calendar.current.isDateInToday(next) {
+                return "Next review later today"
+            } else if Calendar.current.isDateInTomorrow(next) {
+                return "Next review tomorrow"
+            } else if let days = Calendar.current.dateComponents([.day], from: Date(), to: next).day {
+                return "Next review in \(days) days"
+            }
+        }
+        return "All caught up!"
+    }
+
     // MARK: - Stats Section
 
     private var statsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Stats")
+            Text("Progress")
                 .font(.system(.subheadline, design: .serif, weight: .medium))
                 .foregroundStyle(Color.secondaryTextColor)
 
+            // 3 stats in a row
             HStack(spacing: 12) {
-                statCard(value: "\(allEntries.count)", label: "Learnings")
+                statCard(value: "\(allEntries.count)", label: "Total")
                 statCard(value: "\(totalReviewed)", label: "Reviewed")
-                statCard(value: retentionRate, label: "Retention")
+                statCard(value: "\(graduatedCount)", label: "Graduated")
             }
         }
     }
@@ -166,50 +227,27 @@ struct ReviewView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    private var retentionRate: String {
-        let reviewed = allEntries.filter { $0.reviewCount > 0 }
-        guard !reviewed.isEmpty else { return "—" }
+    // MARK: - Science Note
 
-        // Calculate based on current intervals (higher interval = better retention)
-        let avgInterval = reviewed.map { Double($0.reviewInterval) }.reduce(0, +) / Double(reviewed.count)
-        let rate = min(Int((avgInterval / 90.0) * 100), 100)
-        return "\(rate)%"
-    }
-
-    // MARK: - Upcoming Section
-
-    private var upcomingSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Coming up")
-                .font(.system(.subheadline, design: .serif, weight: .medium))
-                .foregroundStyle(Color.secondaryTextColor)
-
-            VStack(spacing: 8) {
-                ForEach(upcomingReviews) { entry in
-                    upcomingRow(entry)
-                }
+    private var scienceNote: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 12))
+                Text("Based on neuroscience")
+                    .font(.system(size: 12, weight: .medium, design: .serif))
             }
+            .foregroundStyle(Color.secondaryTextColor)
+
+            Text("Reviews at 1, 7, 16, and 35 days optimize long-term retention. After 4 successful reviews, learnings graduate.")
+                .font(.system(size: 13, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor.opacity(0.8))
+                .lineSpacing(2)
         }
-    }
-
-    private func upcomingRow(_ entry: LearningEntry) -> some View {
-        HStack(spacing: 12) {
-            Text(entry.previewText)
-                .font(.system(.body, design: .serif))
-                .foregroundStyle(Color.primaryTextColor)
-                .lineLimit(1)
-
-            Spacer()
-
-            if let days = entry.daysUntilReview {
-                Text(days == 0 ? "Today" : days == 1 ? "Tomorrow" : "In \(days) days")
-                    .font(.system(size: 12, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
-            }
-        }
-        .padding(12)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.inputBackgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

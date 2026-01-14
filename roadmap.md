@@ -106,14 +106,97 @@
 
 ---
 
-## v3 - AI & Launch (Current)
+## v3.1 - Review System Overhaul ✅ COMPLETE
+
+**Goal:** Science-backed spaced repetition. Library for browsing learnings.
+
+### Review System Redesign
+- [x] Science-backed intervals (1 → 7 → 16 → 35 days)
+  - Based on Huberman Lab forgetting curve research
+  - Optimal spacing for long-term retention
+- [x] Auto-graduation after N reviews (default 4, configurable 3-6)
+- [x] Simplified review flow: show learning → "Still with you?" → Got it / Review again
+  - Removed quiz phase (no "What do you remember?" prompt)
+  - Learnings as gentle reminders, not memorization tests
+- [x] 2-button outcome: "Got it" (advance interval) / "Review again" (reset to 1 day)
+- [x] Progress ring visualization in Review tab
+- [x] Status messages ("3 learnings ready to reinforce", "Next review in 2 days")
+- [x] Science note explaining the interval system
+- [x] Graduation threshold setting in Profile
+
+### Library Feature
+- [x] Library modal accessible from Today header and Profile
+- [x] Search learnings by content
+- [x] Filter by All / Favorites / Graduated
+- [x] Category filtering with counts
+- [x] Entry detail view with reflections and review progress
+- [x] Proper toolbar title formatting
+
+---
+
+## v3.2 - TestFlight Ready ✅ COMPLETE
+
+**Goal:** Final polish for TestFlight submission.
+
+### App Polish
+- [x] Portrait-only mode (no landscape)
+- [x] Splash screen with "Learnt" branding
+- [x] 3-screen onboarding flow (Welcome, How It Works, Get Started)
+- [x] Bold Spotify Wrapped-style share cards (1080x1920)
+- [x] Share button in Library entries
+- [x] Image/Text toggle for all share sheets
+- [x] Dark mode border on share cards
+
+### TestFlight Checklist
+- [ ] App icon (1024x1024, light/dark/tinted variants)
+- [ ] Privacy policy URL
+- [ ] Support URL
+- [ ] App Store Connect setup
+- [ ] Archive and upload
+
+---
+
+## v4 - Review Types (Planned)
+
+**Goal:** Two types of learnings with different review experiences.
+
+### Learning Types
+- [ ] "Quiz me" type - Active recall with text input
+  - "What do you remember about..." prompt
+  - User types recall attempt
+  - Reveal and compare
+  - Best for: Facts, concepts, techniques
+- [ ] "Remind me" type - Just show the learning
+  - Display learning immediately
+  - "Still with you?" prompt
+  - Best for: Quotes, wisdom, principles
+- [ ] Type selector when creating entry
+- [ ] Default to "Remind me" for most content
+
+---
+
+## v5 - AI-Contextual Reviews (Planned)
+
+**Goal:** AI generates appropriate review experiences based on content.
+
+### Intelligent Review Prompts
+- [ ] AI analyzes learning content type
+- [ ] Facts → Quiz questions ("What % boost do walking meetings give?")
+- [ ] Wisdom → Reflection prompts ("How have you applied this recently?")
+- [ ] Concepts → Explanation requests ("Explain spaced repetition in your own words")
+- [ ] Uses Apple Intelligence (on-device, zero API cost)
+- [ ] Graceful fallback for non-AI devices
+
+---
+
+## v6 - AI & Launch (Future)
 
 **Goal:** Ship to App Store. On-device AI makes it magical.
 
 ### On-Device AI Features (Apple Intelligence - Zero API Cost)
 - [ ] AI reflection question generation
   - Contextual prompts based on entry content
-  - Uses Apple Foundation Models (iOS 17.4+)
+  - Uses Apple Foundation Models
 - [ ] AI auto-categorization
   - Suggest category based on content
   - User confirms or changes
@@ -190,6 +273,12 @@ Record key decisions and rationale:
 | Jan 9 | Affiliate marketing over paid ads | Better ROI for self-help apps |
 | Jan 9 | Monochrome share templates | Match app aesthetic, stand out on social |
 | Jan 9 | Optional voice transcription | User choice, editable after generation |
+| Jan 14 | Simplified review (no quiz phase) | Goal is spaced exposure, not memorization testing |
+| Jan 14 | Science-backed intervals (1,7,16,35) | Huberman Lab forgetting curve research |
+| Jan 14 | Auto-graduation after 4 reviews | Prevents infinite review loops |
+| Jan 14 | Portrait-only, iPhone-only | Focus on core experience, no landscape distractions |
+| Jan 14 | Spotify Wrapped-style share cards | Design at 1080x1920, preview scaled down for crisp exports |
+| Jan 14 | 3-screen onboarding | Minimal introduction, request notifications on final screen |
 
 ---
 

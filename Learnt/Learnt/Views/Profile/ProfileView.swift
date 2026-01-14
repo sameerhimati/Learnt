@@ -12,11 +12,50 @@ struct ProfileView: View {
     @State private var showClearDataAlert = false
     @State private var showWrapped = false
     @State private var showStreakShare = false
+    @State private var showLibrary = false
+    @State private var showGraduationPicker = false
+    @State private var showAppearancePicker = false
+    @State private var selectedStatExplanation: StatType?
 
-    // AI Summary state
-    @State private var aiSummary: String?
-    @State private var standoutInsight: String?
-    @State private var isGeneratingAISummary = false
+    // Settings observation for reminder subtitle updates
+    private var settings: SettingsService { SettingsService.shared }
+
+    // Stat explanation types
+    enum StatType: Identifiable {
+        case reviewed, graduated, reflected
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .reviewed: return "Reviewed"
+            case .graduated: return "Graduated"
+            case .reflected: return "Reflected"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .reviewed: return "arrow.triangle.2.circlepath"
+            case .graduated: return "checkmark.seal"
+            case .reflected: return "text.bubble"
+            }
+        }
+
+        var explanation: String {
+            switch self {
+            case .reviewed:
+                return "Learnings you've reviewed at least once through spaced repetition. Each review strengthens the memory at optimal intervals (1, 7, 16, 35 days)."
+            case .graduated:
+                return "Learnings that have completed the full review cycle. These are now stored in long-term memory and won't appear in your review queue."
+            case .reflected:
+                return "Learnings where you've added reflection prompts (how to apply, what surprised you, simplified explanation, or questions raised)."
+            }
+        }
+    }
+
+    // Force refresh for reminders subtitle
+    @State private var reminderRefreshTrigger = false
 
     // MARK: - Computed Stats
 
@@ -67,16 +106,13 @@ struct ProfileView: View {
         entries.filter { $0.hasReflections }.count
     }
 
-    private var retentionRate: String {
-        let reviewed = entries.filter { $0.reviewCount > 0 }
-        guard !reviewed.isEmpty else { return "—" }
-        let avgInterval = reviewed.map { Double($0.reviewInterval) }.reduce(0, +) / Double(reviewed.count)
-        let rate = min(Int((avgInterval / 90.0) * 100), 100)
-        return "\(rate)%"
+    private var graduatedCount: Int {
+        entries.filter { $0.isGraduated }.count
     }
 
     private var reminderSubtitle: String {
-        let settings = SettingsService.shared
+        // Use reminderRefreshTrigger to force recalculation when returning from settings
+        _ = reminderRefreshTrigger
         let enabled = [settings.captureReminderEnabled, settings.reviewReminderEnabled].filter { $0 }.count
         switch enabled {
         case 0: return "Off"
@@ -146,53 +182,149 @@ struct ProfileView: View {
         return formatter.weekdaySymbols[mostActive - 1]
     }
 
-    private var wrappedData: WrappedData {
+    private var currentMonthData: WrappedData {
         let monthFormatter = DateFormatter()
         monthFormatter.dateFormat = "MMMM yyyy"
 
+        // Load stored summary if available
+        let monthKey = settings.monthKey(from: Date())
+        let storedSummary = settings.getAISummary(for: monthKey)
+
         return WrappedData(
             period: monthFormatter.string(from: Date()),
-            totalLearnings: totalEntries,
-            totalDays: totalDays,
+            monthDate: Date(),
+            totalLearnings: currentMonthEntries.count,
+            totalDays: Set(currentMonthEntries.map { $0.date.startOfDay }).count,
             topCategories: topCategories,
-            mostActiveDay: mostActiveDay,
-            currentStreak: currentStreak,
             longestStreak: longestStreak,
-            aiSummary: aiSummary,
-            standoutInsight: standoutInsight
+            aiSummary: storedSummary
         )
+    }
+
+    private var currentMonthEntries: [LearningEntry] {
+        let calendar = Calendar.current
+        let month = calendar.component(.month, from: Date())
+        let year = calendar.component(.year, from: Date())
+
+        return entries.filter { entry in
+            let entryMonth = calendar.component(.month, from: entry.date)
+            let entryYear = calendar.component(.year, from: entry.date)
+            return entryMonth == month && entryYear == year
+        }
+    }
+
+    private var pastMonthsData: [WrappedData] {
+        var pastMonths: [WrappedData] = []
+        let calendar = Calendar.current
+        let monthFormatter = DateFormatter()
+        monthFormatter.dateFormat = "MMMM yyyy"
+
+        for monthOffset in 1...6 {
+            guard let monthDate = calendar.date(byAdding: .month, value: -monthOffset, to: Date()) else { continue }
+
+            let month = calendar.component(.month, from: monthDate)
+            let year = calendar.component(.year, from: monthDate)
+
+            let monthEntries = entries.filter { entry in
+                let entryMonth = calendar.component(.month, from: entry.date)
+                let entryYear = calendar.component(.year, from: entry.date)
+                return entryMonth == month && entryYear == year
+            }
+
+            if !monthEntries.isEmpty {
+                let datesWithEntries = Set(monthEntries.map { $0.date.startOfDay }).sorted()
+                var longest = 1
+                var current = 1
+                if let firstDate = datesWithEntries.first {
+                    var previousDate = firstDate
+                    for date in datesWithEntries.dropFirst() {
+                        if calendar.isDate(date, inSameDayAs: previousDate.tomorrow) {
+                            current += 1
+                            longest = max(longest, current)
+                        } else {
+                            current = 1
+                        }
+                        previousDate = date
+                    }
+                }
+
+                var categoryCount: [String: (icon: String, count: Int)] = [:]
+                for entry in monthEntries {
+                    for category in entry.categories {
+                        if let existing = categoryCount[category.name] {
+                            categoryCount[category.name] = (category.icon, existing.count + 1)
+                        } else {
+                            categoryCount[category.name] = (category.icon, 1)
+                        }
+                    }
+                }
+                let topCats = categoryCount
+                    .map { (name: $0.key, icon: $0.value.icon, count: $0.value.count) }
+                    .sorted { $0.count > $1.count }
+
+                pastMonths.append(WrappedData(
+                    period: monthFormatter.string(from: monthDate),
+                    monthDate: monthDate,
+                    totalLearnings: monthEntries.count,
+                    totalDays: datesWithEntries.count,
+                    topCategories: topCats,
+                    longestStreak: longest
+                ))
+            }
+        }
+
+        return pastMonths
     }
 
     // MARK: - AI Summary
 
-    private func generateAISummary() {
-        guard !entries.isEmpty, !isGeneratingAISummary else { return }
+    private func generateAISummary(for monthDate: Date, completion: @escaping (String) -> Void) {
+        let calendar = Calendar.current
+        let month = calendar.component(.month, from: monthDate)
+        let year = calendar.component(.year, from: monthDate)
 
-        isGeneratingAISummary = true
+        let monthEntries = entries.filter { entry in
+            let entryMonth = calendar.component(.month, from: entry.date)
+            let entryYear = calendar.component(.year, from: entry.date)
+            return entryMonth == month && entryYear == year
+        }
+
+        guard !monthEntries.isEmpty else {
+            completion("Keep learning, keep growing")
+            return
+        }
 
         let monthFormatter = DateFormatter()
         monthFormatter.dateFormat = "MMMM yyyy"
-        let period = monthFormatter.string(from: Date())
+        let period = monthFormatter.string(from: monthDate)
+
+        // Build top categories for this month
+        var categoryCount: [String: Int] = [:]
+        for entry in monthEntries {
+            for category in entry.categories {
+                categoryCount[category.name, default: 0] += 1
+            }
+        }
+        let topCats = categoryCount
+            .map { (name: $0.key, count: $0.value) }
+            .sorted { $0.count > $1.count }
 
         Task {
             #if DEBUG
             // Use mock data in DEBUG
-            let result = AIService.mockMonthlySummary(count: entries.count, period: period)
+            let result = AIService.mockMonthlySummary(count: monthEntries.count, period: period, topCategories: topCats)
             await MainActor.run {
-                aiSummary = result.summary
-                standoutInsight = result.standoutInsight
-                isGeneratingAISummary = false
+                completion(result.summary)
             }
             #else
             // Use real AI when available
             let result = await AIService.shared.generateMonthlySummary(
-                entries: entries,
-                period: period
+                entries: monthEntries,
+                period: period,
+                topCategories: topCats
             )
             await MainActor.run {
-                aiSummary = result?.summary
-                standoutInsight = result?.standoutInsight
-                isGeneratingAISummary = false
+                completion(result?.summary ?? "Keep learning, keep growing")
             }
             #endif
         }
@@ -239,19 +371,33 @@ struct ProfileView: View {
                 Text("This will permanently delete all \(entries.count) learnings. This cannot be undone.")
             }
             .fullScreenCover(isPresented: $showWrapped) {
-                WrappedView(data: wrappedData) { cardIndex in
-                    // Share the wrapped card
-                    shareWrappedCard(at: cardIndex)
-                }
-            }
-            .onChange(of: showWrapped) { _, isShowing in
-                // Generate AI summary when Wrapped view is opened
-                if isShowing && aiSummary == nil {
-                    generateAISummary()
-                }
+                WrappedView(
+                    currentMonth: currentMonthData,
+                    pastMonths: pastMonthsData,
+                    onShare: {},
+                    onGenerateSummary: { monthDate, completion in
+                        generateAISummary(for: monthDate, completion: completion)
+                    }
+                )
             }
             .sheet(isPresented: $showStreakShare) {
                 StreakShareSheet(streakDays: currentStreak, totalLearnings: totalEntries)
+            }
+            .sheet(isPresented: $showLibrary) {
+                LibraryView()
+            }
+            .sheet(isPresented: $showGraduationPicker) {
+                GraduationSettingsSheet()
+            }
+            .sheet(isPresented: $showAppearancePicker) {
+                AppearanceSettingsSheet()
+            }
+            .sheet(item: $selectedStatExplanation) { stat in
+                StatExplanationSheet(stat: stat)
+            }
+            .onAppear {
+                // Refresh reminders subtitle when returning from settings
+                reminderRefreshTrigger.toggle()
             }
         }
     }
@@ -260,11 +406,29 @@ struct ProfileView: View {
 
     private var shareSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Share")
+            Text("Share & Browse")
                 .font(.system(.subheadline, design: .serif, weight: .medium))
                 .foregroundStyle(Color.secondaryTextColor)
 
             HStack(spacing: 12) {
+                // Library button
+                Button(action: { showLibrary = true }) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "books.vertical")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.primaryTextColor)
+
+                        Text("Library")
+                            .font(.system(size: 12, design: .serif))
+                            .foregroundStyle(Color.primaryTextColor)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
                 // Your Month button
                 Button(action: { showWrapped = true }) {
                     VStack(spacing: 8) {
@@ -290,7 +454,7 @@ struct ProfileView: View {
                             .font(.system(size: 20))
                             .foregroundStyle(Color.primaryTextColor)
 
-                        Text("Share Streak")
+                        Text("Streak")
                             .font(.system(size: 12, design: .serif))
                             .foregroundStyle(Color.primaryTextColor)
                     }
@@ -304,10 +468,6 @@ struct ProfileView: View {
                 .opacity(currentStreak == 0 ? 0.5 : 1)
             }
         }
-    }
-
-    private func shareWrappedCard(at index: Int) {
-        // TODO: Implement rendering specific wrapped card to image and sharing
     }
 
     // MARK: - Main Stats
@@ -329,9 +489,9 @@ struct ProfileView: View {
                 .foregroundStyle(Color.secondaryTextColor)
 
             HStack(spacing: 12) {
-                miniStatCard(value: "\(reviewedCount)", label: "Reviewed")
-                miniStatCard(value: retentionRate, label: "Retention")
-                miniStatCard(value: "\(reflectionCount)", label: "Reflected")
+                tappableStatCard(value: "\(reviewedCount)", label: "Reviewed", type: .reviewed)
+                tappableStatCard(value: "\(graduatedCount)", label: "Graduated", type: .graduated)
+                tappableStatCard(value: "\(reflectionCount)", label: "Reflected", type: .reflected)
             }
 
             if dueForReview > 0 {
@@ -387,8 +547,63 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
 
-            settingsRow(icon: "moon", title: "Appearance", subtitle: "System")
-            settingsRow(icon: "square.and.arrow.up", title: "Export Data", subtitle: "Coming soon")
+            // Graduation threshold
+            Button(action: { showGraduationPicker = true }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.seal")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.secondaryTextColor)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Graduation")
+                            .font(.system(.body, design: .serif))
+                            .foregroundStyle(Color.primaryTextColor)
+                        Text("\(settings.graduationThreshold) reviews to graduate")
+                            .font(.system(.caption, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+                .padding(16)
+                .background(Color.inputBackgroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
+            // Appearance
+            Button(action: { showAppearancePicker = true }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "moon")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.secondaryTextColor)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Appearance")
+                            .font(.system(.body, design: .serif))
+                            .foregroundStyle(Color.primaryTextColor)
+                        Text(settings.appearanceMode.rawValue)
+                            .font(.system(.caption, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+                .padding(16)
+                .background(Color.inputBackgroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
 
             // Clear data button
             Button(action: { showClearDataAlert = true }) {
@@ -451,47 +666,255 @@ struct ProfileView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    private func miniStatCard(value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.system(.title3, design: .serif, weight: .medium))
-                .foregroundStyle(Color.primaryTextColor)
-
-            Text(label)
-                .font(.system(size: 10, design: .serif))
-                .foregroundStyle(Color.secondaryTextColor)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Color.inputBackgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func settingsRow(icon: String, title: String, subtitle: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(Color.secondaryTextColor)
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(.body, design: .serif))
+    private func tappableStatCard(value: String, label: String, type: StatType) -> some View {
+        Button(action: { selectedStatExplanation = type }) {
+            VStack(spacing: 4) {
+                Text(value)
+                    .font(.system(.title3, design: .serif, weight: .medium))
                     .foregroundStyle(Color.primaryTextColor)
-                Text(subtitle)
-                    .font(.system(.caption, design: .serif))
+
+                Text(label)
+                    .font(.system(size: 10, design: .serif))
                     .foregroundStyle(Color.secondaryTextColor)
             }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14))
-                .foregroundStyle(Color.secondaryTextColor)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.inputBackgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
-        .padding(16)
-        .background(Color.inputBackgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .buttonStyle(.plain)
+    }
+
+}
+
+// MARK: - Graduation Settings Sheet
+
+struct GraduationSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedThreshold: Int = SettingsService.shared.graduationThreshold
+
+    private let options = [3, 4, 5, 6]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Explanation
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("When do learnings graduate?")
+                            .font(.system(.headline, design: .serif))
+                            .foregroundStyle(Color.primaryTextColor)
+
+                        Text("Graduated learnings have completed the review cycle and are stored in long-term memory. They won't appear in your review queue anymore.")
+                            .font(.system(.subheadline, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+                            .lineSpacing(2)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    // Options
+                    VStack(spacing: 0) {
+                        ForEach(options, id: \.self) { option in
+                            Button(action: {
+                                selectedThreshold = option
+                                SettingsService.shared.graduationThreshold = option
+                            }) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("\(option) reviews")
+                                            .font(.system(.body, design: .serif, weight: selectedThreshold == option ? .medium : .regular))
+                                            .foregroundStyle(Color.primaryTextColor)
+
+                                        Text(descriptionFor(option))
+                                            .font(.system(size: 12, design: .serif))
+                                            .foregroundStyle(Color.secondaryTextColor)
+                                    }
+
+                                    Spacer()
+
+                                    if selectedThreshold == option {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(Color.primaryTextColor)
+                                    }
+                                }
+                                .padding(16)
+                            }
+                            .buttonStyle(.plain)
+
+                            if option != options.last {
+                                Divider()
+                                    .background(Color.dividerColor)
+                                    .padding(.leading, 16)
+                            }
+                        }
+                    }
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    // Science note
+                    HStack(spacing: 8) {
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 12))
+                        Text("Default is 4 reviews based on neuroscience research on memory consolidation.")
+                            .font(.system(size: 12, design: .serif))
+                    }
+                    .foregroundStyle(Color.secondaryTextColor)
+                    .padding(.top, 8)
+                }
+                .padding(16)
+            }
+            .background(Color.appBackgroundColor)
+            .navigationTitle("Graduation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .font(.system(.body, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.primaryTextColor)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func descriptionFor(_ count: Int) -> String {
+        switch count {
+        case 3: return "Faster graduation, less reinforcement"
+        case 4: return "Recommended - optimal retention"
+        case 5: return "More reinforcement, slower graduation"
+        case 6: return "Maximum reinforcement"
+        default: return ""
+        }
+    }
+}
+
+// MARK: - Appearance Settings Sheet
+
+struct AppearanceSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedMode: SettingsService.AppearanceMode = SettingsService.shared.appearanceMode
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Options
+                    VStack(spacing: 0) {
+                        ForEach(SettingsService.AppearanceMode.allCases, id: \.self) { mode in
+                            Button(action: {
+                                selectedMode = mode
+                                SettingsService.shared.appearanceMode = mode
+                            }) {
+                                HStack {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: iconFor(mode))
+                                            .font(.system(size: 18))
+                                            .foregroundStyle(Color.secondaryTextColor)
+                                            .frame(width: 24)
+
+                                        Text(mode.rawValue)
+                                            .font(.system(.body, design: .serif, weight: selectedMode == mode ? .medium : .regular))
+                                            .foregroundStyle(Color.primaryTextColor)
+                                    }
+
+                                    Spacer()
+
+                                    if selectedMode == mode {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(Color.primaryTextColor)
+                                    }
+                                }
+                                .padding(16)
+                            }
+                            .buttonStyle(.plain)
+
+                            if mode != SettingsService.AppearanceMode.allCases.last {
+                                Divider()
+                                    .background(Color.dividerColor)
+                                    .padding(.leading, 52)
+                            }
+                        }
+                    }
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(16)
+            }
+            .background(Color.appBackgroundColor)
+            .navigationTitle("Appearance")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .font(.system(.body, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.primaryTextColor)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func iconFor(_ mode: SettingsService.AppearanceMode) -> String {
+        switch mode {
+        case .system: return "iphone"
+        case .light: return "sun.max"
+        case .dark: return "moon"
+        }
+    }
+}
+
+// MARK: - Stat Explanation Sheet
+
+struct StatExplanationSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let stat: ProfileView.StatType
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Icon
+                Image(systemName: stat.icon)
+                    .font(.system(size: 40))
+                    .foregroundStyle(Color.primaryTextColor)
+                    .padding(.top, 24)
+
+                // Title
+                Text(stat.title)
+                    .font(.system(.title2, design: .serif, weight: .medium))
+                    .foregroundStyle(Color.primaryTextColor)
+
+                // Explanation
+                Text(stat.explanation)
+                    .font(.system(.body, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 24)
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+            .background(Color.appBackgroundColor)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.secondaryTextColor)
+                            .frame(width: 28, height: 28)
+                            .background(Color.inputBackgroundColor)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 

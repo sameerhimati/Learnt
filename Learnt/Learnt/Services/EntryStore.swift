@@ -6,11 +6,10 @@
 import Foundation
 import SwiftData
 
-/// Result of a spaced repetition review
+/// Result of a spaced repetition review (simplified to 2 options)
 enum ReviewResult {
-    case nailed   // Recalled perfectly → interval × 2.5
-    case partial  // Partially recalled → interval × 1.5
-    case forgot   // Couldn't recall → reset to 1 day
+    case gotIt       // Advance to next interval in the schedule
+    case reviewAgain // Reset to 1-day interval
 }
 
 @Observable
@@ -151,34 +150,69 @@ final class EntryStore {
     }
 
     /// Record a review result and update spaced repetition schedule
+    /// Science-backed intervals: 1 → 7 → 16 → 35 days (based on Huberman Lab research)
     /// - Parameters:
     ///   - entry: The entry being reviewed
-    ///   - result: How well the user recalled (.nailed, .partial, .forgot)
+    ///   - result: Whether user recalled it (.gotIt) or needs another review (.reviewAgain)
     func recordReview(_ entry: LearningEntry, result: ReviewResult) {
         let calendar = Calendar.current
 
         switch result {
-        case .nailed:
-            // Multiply interval by 2.5, max 90 days
-            let newInterval = min(Int(Double(entry.reviewInterval) * 2.5), 90)
-            entry.reviewInterval = newInterval
+        case .gotIt:
             entry.reviewCount += 1
 
-        case .partial:
-            // Multiply interval by 1.5
-            let newInterval = min(Int(Double(entry.reviewInterval) * 1.5), 90)
-            entry.reviewInterval = newInterval
-            entry.reviewCount += 1
+            // Check for graduation
+            let threshold = SettingsService.shared.graduationThreshold
+            if entry.reviewCount >= threshold {
+                entry.isGraduated = true
+                entry.nextReviewDate = nil  // No more reviews needed
+            } else {
+                // Science-backed intervals: 1, 7, 16, 35 days
+                let intervals = [1, 7, 16, 35]
+                let nextInterval = intervals[min(entry.reviewCount, intervals.count - 1)]
+                entry.reviewInterval = nextInterval
+                entry.nextReviewDate = calendar.date(byAdding: .day, value: nextInterval, to: Date())
+            }
 
-        case .forgot:
-            // Reset to 1 day
+        case .reviewAgain:
+            // Reset interval to 1 day but keep review count
             entry.reviewInterval = 1
+            entry.nextReviewDate = calendar.date(byAdding: .day, value: 1, to: Date())
         }
 
-        // Set next review date
-        entry.nextReviewDate = calendar.date(byAdding: .day, value: entry.reviewInterval, to: Date())
         entry.updatedAt = Date()
         save()
+
+        // Update review streak
+        updateReviewStreak()
+    }
+
+    /// Update review streak based on review activity
+    private func updateReviewStreak() {
+        let settings = SettingsService.shared
+        let today = Date().startOfDay
+
+        if let lastReview = settings.lastReviewDate?.startOfDay {
+            if lastReview == today {
+                // Already reviewed today, no change to streak
+            } else if lastReview == today.yesterday.startOfDay {
+                // Consecutive day, increment streak
+                settings.reviewStreak += 1
+            } else {
+                // Missed days, reset streak
+                settings.reviewStreak = 1
+            }
+        } else {
+            // First review ever
+            settings.reviewStreak = 1
+        }
+
+        settings.lastReviewDate = today
+
+        // Update longest streak if current is higher
+        if settings.reviewStreak > settings.longestReviewStreak {
+            settings.longestReviewStreak = settings.reviewStreak
+        }
     }
 
     // MARK: - Delete

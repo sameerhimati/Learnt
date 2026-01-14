@@ -26,7 +26,7 @@ struct LearningCard: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(16)
+        .padding(20)
         .background(Color.inputBackgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .contentShape(Rectangle())
@@ -41,13 +41,13 @@ struct LearningCard: View {
 
     private var mainContent: some View {
         HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 // Learning content
                 Text(isExpanded ? entry.content : entry.previewText)
-                    .font(.system(.body, design: .serif))
+                    .font(.system(size: 17, design: .serif))
                     .foregroundStyle(Color.primaryTextColor)
                     .lineLimit(isExpanded ? nil : 2)
-                    .lineSpacing(4)
+                    .lineSpacing(5)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Meta row: time + categories + reflection count

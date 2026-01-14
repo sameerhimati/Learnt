@@ -42,6 +42,9 @@ final class LearningEntry {
     // Favorites
     var isFavorite: Bool = false
 
+    // Graduation (after completing review cycle)
+    var isGraduated: Bool = false
+
     init(
         content: String,
         date: Date = Date(),
@@ -65,9 +68,10 @@ final class LearningEntry {
         self.reviewInterval = 1
         self.reviewCount = 0
 
-        // Transcription and favorites defaults
+        // Transcription, favorites, and graduation defaults
         self.transcription = nil
         self.isFavorite = false
+        self.isGraduated = false
     }
 }
 

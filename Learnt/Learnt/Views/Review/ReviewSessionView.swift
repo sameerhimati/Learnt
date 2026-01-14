@@ -12,11 +12,16 @@ struct ReviewSessionView: View {
     let onComplete: () -> Void
 
     @State private var currentIndex = 0
-    @State private var phase: ReviewPhase = .prompt
-    @State private var userRecall = ""
-    @State private var completedCount = 0
+    @State private var showAddReflection = false
+    @State private var reflectionApplication = ""
+    @State private var reflectionSurprise = ""
+    @State private var reflectionSimplification = ""
+    @State private var reflectionQuestion = ""
+    @FocusState private var focusedField: ReflectionField?
 
-    @FocusState private var isRecallFocused: Bool
+    enum ReflectionField {
+        case application, surprise, simplification, question
+    }
 
     private var entryStore: EntryStore {
         EntryStore(modelContext: modelContext)
@@ -32,11 +37,6 @@ struct ReviewSessionView: View {
         return Double(currentIndex) / Double(entries.count)
     }
 
-    enum ReviewPhase {
-        case prompt
-        case reveal
-    }
-
     var body: some View {
         ZStack {
             Color.appBackgroundColor
@@ -47,24 +47,25 @@ struct ReviewSessionView: View {
                 header
 
                 if let entry = currentEntry {
-                    // Content
+                    // Learning card
                     ScrollView {
-                        VStack(spacing: 24) {
-                            switch phase {
-                            case .prompt:
-                                promptPhase(entry: entry)
-                            case .reveal:
-                                revealPhase(entry: entry)
-                            }
-                        }
-                        .padding(16)
-                        .padding(.bottom, 100)
+                        learningCard(entry: entry)
+                            .padding(16)
+                            .padding(.bottom, 100)
                     }
                 } else {
                     // Session complete
                     completionView
                 }
             }
+        }
+        .sheet(isPresented: $showAddReflection) {
+            ReflectionInputSheet(
+                application: $reflectionApplication,
+                surprise: $reflectionSurprise,
+                simplification: $reflectionSimplification,
+                question: $reflectionQuestion
+            )
         }
     }
 
@@ -108,111 +109,30 @@ struct ReviewSessionView: View {
         .padding(.vertical, 12)
     }
 
-    // MARK: - Prompt Phase
+    // MARK: - Learning Card
 
-    private func promptPhase(entry: LearningEntry) -> some View {
+    private func learningCard(entry: LearningEntry) -> some View {
         VStack(alignment: .leading, spacing: 24) {
-            // Instruction
-            VStack(alignment: .leading, spacing: 8) {
-                Text("What do you remember about...")
-                    .font(.system(.subheadline, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
+            // Date header
+            Text(entry.date.formattedFull)
+                .font(.system(.subheadline, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor)
 
-                // Show truncated hint
-                Text(entry.previewText)
-                    .font(.system(.title3, design: .serif, weight: .medium))
-                    .foregroundStyle(Color.primaryTextColor)
-            }
-
-            // Date context
-            Text("From \(entry.date.formattedFull)")
-                .font(.system(size: 12, design: .serif))
-                .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
-
-            // Recall input
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Your recall")
-                    .font(.system(.subheadline, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
-
-                TextField("What do you remember?", text: $userRecall, axis: .vertical)
-                    .font(.system(.body, design: .serif))
-                    .foregroundStyle(Color.primaryTextColor)
-                    .focused($isRecallFocused)
-                    .lineLimit(4...8)
-                    .padding(16)
-                    .background(Color.inputBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
-            Spacer()
-                .frame(height: 20)
-
-            // Action buttons
-            HStack(spacing: 12) {
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        phase = .reveal
-                    }
-                }) {
-                    Text("I remember")
-                        .font(.system(.body, design: .serif, weight: .medium))
-                        .foregroundStyle(Color.appBackgroundColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.primaryTextColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        phase = .reveal
-                    }
-                }) {
-                    Text("Forgot")
-                        .font(.system(.body, design: .serif, weight: .medium))
-                        .foregroundStyle(Color.primaryTextColor)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.inputBackgroundColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                isRecallFocused = true
-            }
-        }
-    }
-
-    // MARK: - Reveal Phase
-
-    private func revealPhase(entry: LearningEntry) -> some View {
-        VStack(alignment: .leading, spacing: 24) {
-            // Original learning
-            VStack(alignment: .leading, spacing: 8) {
-                Text("You wrote on \(entry.date.formattedFull):")
-                    .font(.system(.subheadline, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
-
-                Text(entry.content)
-                    .font(.system(.body, design: .serif))
-                    .foregroundStyle(Color.primaryTextColor)
-                    .lineSpacing(4)
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.inputBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
+            // Main content
+            Text(entry.content)
+                .font(.system(.title3, design: .serif))
+                .foregroundStyle(Color.primaryTextColor)
+                .lineSpacing(4)
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.inputBackgroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
 
             // Reflections (if any)
             if entry.hasReflections {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Your reflections")
-                        .font(.system(.subheadline, design: .serif))
+                        .font(.system(.caption, design: .serif))
                         .foregroundStyle(Color.secondaryTextColor)
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -233,37 +153,128 @@ struct ReviewSessionView: View {
                     .background(Color.inputBackgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+            } else {
+                // Option to add reflections
+                if showAddReflection {
+                    addReflectionSection
+                } else {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showAddReflection = true
+                        }
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 14))
+                            Text("Add a reflection")
+                                .font(.system(.subheadline, design: .serif))
+                        }
+                        .foregroundStyle(Color.secondaryTextColor)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
 
             Spacer()
-                .frame(height: 20)
+                .frame(height: 24)
 
-            // Self-rating
+            // Action prompt
             VStack(alignment: .leading, spacing: 12) {
-                Text("How'd you do?")
+                Text("Still with you?")
                     .font(.system(.subheadline, design: .serif))
                     .foregroundStyle(Color.secondaryTextColor)
 
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     ratingButton(
-                        title: "Nailed it",
-                        subtitle: "Perfect recall",
-                        result: .nailed
+                        title: "Got it",
+                        subtitle: "Next interval",
+                        isPrimary: true,
+                        result: .gotIt
                     )
 
                     ratingButton(
-                        title: "Partial",
-                        subtitle: "Some gaps",
-                        result: .partial
-                    )
-
-                    ratingButton(
-                        title: "Forgot",
-                        subtitle: "Start over",
-                        result: .forgot
+                        title: "Review again",
+                        subtitle: "See it sooner",
+                        isPrimary: false,
+                        result: .reviewAgain
                     )
                 }
             }
+        }
+    }
+
+    // MARK: - Add Reflection Section
+
+    private var hasEnteredReflections: Bool {
+        !reflectionApplication.isEmpty || !reflectionSurprise.isEmpty ||
+        !reflectionSimplification.isEmpty || !reflectionQuestion.isEmpty
+    }
+
+    private var addReflectionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Show entered reflections preview
+            if hasEnteredReflections {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Your reflections")
+                            .font(.system(.caption, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+
+                        Spacer()
+
+                        Button(action: { showAddReflection = true }) {
+                            Text("Edit")
+                                .font(.system(size: 12, design: .serif))
+                                .foregroundStyle(Color.primaryTextColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        if !reflectionApplication.isEmpty {
+                            reflectionPreviewRow(icon: "lightbulb", content: reflectionApplication)
+                        }
+                        if !reflectionSurprise.isEmpty {
+                            reflectionPreviewRow(icon: "exclamationmark.circle", content: reflectionSurprise)
+                        }
+                        if !reflectionSimplification.isEmpty {
+                            reflectionPreviewRow(icon: "text.quote", content: reflectionSimplification)
+                        }
+                        if !reflectionQuestion.isEmpty {
+                            reflectionPreviewRow(icon: "questionmark.circle", content: reflectionQuestion)
+                        }
+                    }
+                }
+                .padding(16)
+                .background(Color.inputBackgroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                // Button to add reflections
+                Button(action: { showAddReflection = true }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 14))
+                        Text("Add a reflection")
+                            .font(.system(.subheadline, design: .serif))
+                    }
+                    .foregroundStyle(Color.secondaryTextColor)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func reflectionPreviewRow(icon: String, content: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.secondaryTextColor)
+                .frame(width: 14)
+
+            Text(content)
+                .font(.system(size: 13, design: .serif))
+                .foregroundStyle(Color.primaryTextColor)
+                .lineLimit(2)
         }
     }
 
@@ -286,22 +297,22 @@ struct ReviewSessionView: View {
         }
     }
 
-    private func ratingButton(title: String, subtitle: String, result: ReviewResult) -> some View {
+    private func ratingButton(title: String, subtitle: String, isPrimary: Bool, result: ReviewResult) -> some View {
         Button(action: {
             recordAndAdvance(result: result)
         }) {
             VStack(spacing: 4) {
                 Text(title)
-                    .font(.system(.subheadline, design: .serif, weight: .medium))
-                    .foregroundStyle(Color.primaryTextColor)
+                    .font(.system(.body, design: .serif, weight: .medium))
+                    .foregroundStyle(isPrimary ? Color.appBackgroundColor : Color.primaryTextColor)
 
                 Text(subtitle)
-                    .font(.system(size: 10, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
+                    .font(.system(size: 11, design: .serif))
+                    .foregroundStyle(isPrimary ? Color.appBackgroundColor.opacity(0.7) : Color.secondaryTextColor)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.inputBackgroundColor)
+            .padding(.vertical, 18)
+            .background(isPrimary ? Color.primaryTextColor : Color.inputBackgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
@@ -347,14 +358,240 @@ struct ReviewSessionView: View {
     private func recordAndAdvance(result: ReviewResult) {
         guard let entry = currentEntry else { return }
 
+        // Save any reflections entered during review
+        if hasEnteredReflections {
+            let app = reflectionApplication.trimmingCharacters(in: .whitespacesAndNewlines)
+            let sur = reflectionSurprise.trimmingCharacters(in: .whitespacesAndNewlines)
+            let sim = reflectionSimplification.trimmingCharacters(in: .whitespacesAndNewlines)
+            let que = reflectionQuestion.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            entryStore.updateReflections(
+                entry,
+                application: app.isEmpty ? nil : app,
+                surprise: sur.isEmpty ? nil : sur,
+                simplification: sim.isEmpty ? nil : sim,
+                question: que.isEmpty ? nil : que
+            )
+        }
+
         // Record the review result
         entryStore.recordReview(entry, result: result)
 
-        // Reset state and move to next
+        // Reset reflection state for next entry
+        resetReflectionState()
+
+        // Move to next
         withAnimation(.easeInOut(duration: 0.2)) {
-            userRecall = ""
-            phase = .prompt
             currentIndex += 1
+        }
+    }
+
+    private func resetReflectionState() {
+        showAddReflection = false
+        reflectionApplication = ""
+        reflectionSurprise = ""
+        reflectionSimplification = ""
+        reflectionQuestion = ""
+        focusedField = nil
+    }
+}
+
+// MARK: - Reflection Input Sheet
+
+struct ReflectionInputSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var application: String
+    @Binding var surprise: String
+    @Binding var simplification: String
+    @Binding var question: String
+
+    @State private var isRecording = false
+    @State private var currentField: ReflectionFieldType?
+    @State private var recordingDuration: TimeInterval = 0
+    @FocusState private var focusedField: ReflectionFieldType?
+
+    enum ReflectionFieldType {
+        case application, surprise, simplification, question
+    }
+
+    private let recorder = VoiceRecorderService.shared
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Instructions
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Add reflections")
+                            .font(.system(.headline, design: .serif))
+                            .foregroundStyle(Color.primaryTextColor)
+
+                        Text("Deepen your understanding by reflecting on what you've learned.")
+                            .font(.system(.subheadline, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+                    }
+
+                    // Reflection fields
+                    VStack(spacing: 16) {
+                        reflectionField(
+                            icon: "lightbulb",
+                            title: "Apply",
+                            placeholder: "How could you use this?",
+                            text: $application,
+                            field: .application
+                        )
+
+                        reflectionField(
+                            icon: "exclamationmark.circle",
+                            title: "Surprised",
+                            placeholder: "What was unexpected?",
+                            text: $surprise,
+                            field: .surprise
+                        )
+
+                        reflectionField(
+                            icon: "text.quote",
+                            title: "Simplify",
+                            placeholder: "Explain it simply",
+                            text: $simplification,
+                            field: .simplification
+                        )
+
+                        reflectionField(
+                            icon: "questionmark.circle",
+                            title: "Question",
+                            placeholder: "What does this raise?",
+                            text: $question,
+                            field: .question
+                        )
+                    }
+                    .padding(16)
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(16)
+            }
+            .background(Color.appBackgroundColor)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .font(.system(.body, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .font(.system(.body, design: .serif, weight: .medium))
+                    .foregroundStyle(Color.primaryTextColor)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .onChange(of: recorder.recordingDuration) { _, newValue in
+            if isRecording {
+                recordingDuration = newValue
+            }
+        }
+    }
+
+    private func formattedDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    private func reflectionField(icon: String, title: String, placeholder: String, text: Binding<String>, field: ReflectionFieldType) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.secondaryTextColor)
+
+                Text(title)
+                    .font(.system(size: 12, weight: .medium, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+            }
+
+            HStack(alignment: .top, spacing: 8) {
+                TextField(placeholder, text: text, axis: .vertical)
+                    .font(.system(.body, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+                    .focused($focusedField, equals: field)
+                    .lineLimit(3...6)
+                    .padding(12)
+                    .background(Color.appBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                // Inline mic button with duration
+                VStack(spacing: 4) {
+                    Button(action: {
+                        if isRecording && currentField == field {
+                            stopRecording(for: field)
+                        } else {
+                            startRecording(for: field)
+                        }
+                    }) {
+                        Image(systemName: isRecording && currentField == field ? "stop.fill" : "mic")
+                            .font(.system(size: 14))
+                            .foregroundStyle(isRecording && currentField == field ? Color.appBackgroundColor : Color.secondaryTextColor)
+                            .frame(width: 40, height: 40)
+                            .background(isRecording && currentField == field ? Color.primaryTextColor : Color.appBackgroundColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+
+                    // Recording duration indicator
+                    if isRecording && currentField == field {
+                        Text(formattedDuration(recordingDuration))
+                            .font(.system(size: 11, design: .serif).monospacedDigit())
+                            .foregroundStyle(Color.primaryTextColor)
+                    }
+                }
+            }
+        }
+    }
+
+    private func startRecording(for field: ReflectionFieldType) {
+        // Reset duration before starting
+        recordingDuration = 0
+
+        Task {
+            if !recorder.hasPermissions {
+                let granted = await recorder.requestPermissions()
+                guard granted else { return }
+            }
+
+            if let _ = recorder.startRecording() {
+                await MainActor.run {
+                    isRecording = true
+                    currentField = field
+                }
+            }
+        }
+    }
+
+    private func stopRecording(for field: ReflectionFieldType) {
+        guard let url = recorder.stopRecording() else { return }
+        isRecording = false
+
+        Task {
+            if let text = await recorder.transcribe(audioURL: url) {
+                await MainActor.run {
+                    switch field {
+                    case .application: application = text
+                    case .surprise: surprise = text
+                    case .simplification: simplification = text
+                    case .question: question = text
+                    }
+                }
+            }
+            // Clean up temp audio
+            try? FileManager.default.removeItem(at: url)
         }
     }
 }

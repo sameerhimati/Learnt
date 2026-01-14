@@ -163,7 +163,7 @@ struct VoiceRecordingView: View {
                     } else {
                         Toggle("", isOn: $wantsTranscription)
                             .labelsHidden()
-                            .tint(Color.primaryTextColor)
+                            .toggleStyle(MonochromeToggleStyle())
                     }
                 }
 
@@ -178,9 +178,9 @@ struct VoiceRecordingView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.appBackgroundColor)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
-                    } else if !editableTranscription.isEmpty {
+                    } else {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Edit if needed")
+                            Text(editableTranscription.isEmpty ? "Tap to add transcription" : "Edit if needed")
                                 .font(.system(size: 10, design: .serif))
                                 .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
 
@@ -407,6 +407,37 @@ private class RecordingPlaybackManager: NSObject, ObservableObject, AVAudioPlaye
     VoiceRecordingView(audioFileName: .constant(nil), title: .constant(""), transcription: .constant(nil))
         .padding()
         .background(Color.appBackgroundColor)
+}
+
+// MARK: - Monochrome Toggle Style
+
+struct MonochromeToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack {
+            configuration.label
+
+            ZStack {
+                // Track
+                Capsule()
+                    .fill(configuration.isOn ? Color.primaryTextColor : Color.dividerColor)
+                    .frame(width: 51, height: 31)
+
+                // Thumb with border for contrast
+                Circle()
+                    .fill(Color.appBackgroundColor)
+                    .overlay(
+                        Circle()
+                            .stroke(configuration.isOn ? Color.primaryTextColor : Color.dividerColor, lineWidth: 0.5)
+                    )
+                    .frame(width: 27, height: 27)
+                    .offset(x: configuration.isOn ? 10 : -10)
+                    .animation(.easeInOut(duration: 0.15), value: configuration.isOn)
+            }
+            .onTapGesture {
+                configuration.isOn.toggle()
+            }
+        }
+    }
 }
 
 #Preview("Has Recording") {

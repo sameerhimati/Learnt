@@ -19,6 +19,7 @@ struct TodayView: View {
     @State private var entryToDelete: LearningEntry?
     @State private var isQuoteHidden = QuoteService.shared.isQuoteHidden
     @State private var entryToShare: LearningEntry?
+    @State private var showLibrary = false
 
     private let quoteService = QuoteService.shared
 
@@ -212,6 +213,9 @@ struct TodayView: View {
         .sheet(item: $entryToShare) { entry in
             ShareEntrySheet(entry: entry)
         }
+        .sheet(isPresented: $showLibrary) {
+            LibraryView()
+        }
     }
 
     // MARK: - Header
@@ -225,6 +229,13 @@ struct TodayView: View {
             Spacer()
 
             HStack(spacing: 16) {
+                Button(action: { showLibrary = true }) {
+                    Image(systemName: "books.vertical")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.primaryTextColor)
+                }
+                .buttonStyle(.plain)
+
                 Button(action: { showCalendar = true }) {
                     Image(systemName: "calendar")
                         .font(.system(size: 20))
