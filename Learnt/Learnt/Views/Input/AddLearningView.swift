@@ -238,7 +238,7 @@ struct AddLearningView: View {
             .buttonStyle(.plain)
             .disabled(!canSave)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 24)
         .padding(.vertical, 12)
     }
 

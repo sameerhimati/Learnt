@@ -48,31 +48,34 @@ struct CoachMarkView: View {
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(.subheadline, design: .serif, weight: .semibold))
+                .font(.system(.body, design: .serif, weight: .semibold))
                 .foregroundStyle(Color.appBackgroundColor)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(message)
-                .font(.system(.caption, design: .serif))
+                .font(.system(.subheadline, design: .serif))
                 .foregroundStyle(Color.appBackgroundColor.opacity(0.9))
-                .lineSpacing(2)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
 
             Button(action: onDismiss) {
                 Text("Got it")
-                    .font(.system(.caption, design: .serif, weight: .medium))
+                    .font(.system(.subheadline, design: .serif, weight: .medium))
                     .foregroundStyle(Color.primaryTextColor)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
                     .background(Color.appBackgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
             .padding(.top, 4)
         }
-        .padding(16)
+        .padding(20)
+        .frame(minWidth: 260, maxWidth: 300)
         .background(Color.primaryTextColor)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     private var arrow: some View {

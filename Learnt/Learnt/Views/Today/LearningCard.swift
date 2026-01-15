@@ -175,6 +175,7 @@ struct LearningCard: View {
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.trailing, 4)
         }
     }
 
