@@ -167,8 +167,8 @@ final class EntryStore {
                 entry.isGraduated = true
                 entry.nextReviewDate = nil  // No more reviews needed
             } else {
-                // Science-backed intervals: 1, 7, 16, 35 days
-                let intervals = [1, 7, 16, 35]
+                // Science-backed intervals: 1, 7, 16, 30, 45, 60 days
+                let intervals = [1, 7, 16, 30, 45, 60]
                 let nextInterval = intervals[min(entry.reviewCount, intervals.count - 1)]
                 entry.reviewInterval = nextInterval
                 entry.nextReviewDate = calendar.date(byAdding: .day, value: nextInterval, to: Date())

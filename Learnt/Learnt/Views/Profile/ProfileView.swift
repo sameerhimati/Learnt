@@ -814,12 +814,12 @@ struct GraduationSettingsSheet: View {
                                 SettingsService.shared.graduationThreshold = option
                             }) {
                                 HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
+                                    VStack(alignment: .leading, spacing: 4) {
                                         Text("\(option) reviews")
                                             .font(.system(.body, design: .serif, weight: selectedThreshold == option ? .medium : .regular))
                                             .foregroundStyle(Color.primaryTextColor)
 
-                                        Text(descriptionFor(option))
+                                        Text(intervalsFor(option))
                                             .font(.system(size: 12, design: .serif))
                                             .foregroundStyle(Color.secondaryTextColor)
                                     }
@@ -833,6 +833,7 @@ struct GraduationSettingsSheet: View {
                                     }
                                 }
                                 .padding(16)
+                                .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
 
@@ -872,12 +873,12 @@ struct GraduationSettingsSheet: View {
         .presentationDetents([.large])
     }
 
-    private func descriptionFor(_ count: Int) -> String {
+    private func intervalsFor(_ count: Int) -> String {
         switch count {
-        case 3: return "Faster graduation, less reinforcement"
-        case 4: return "Recommended - optimal retention"
-        case 5: return "More reinforcement, slower graduation"
-        case 6: return "Maximum reinforcement"
+        case 3: return "Days 1, 7, 16"
+        case 4: return "Days 1, 7, 16, 30 (recommended)"
+        case 5: return "Days 1, 7, 16, 30, 45"
+        case 6: return "Days 1, 7, 16, 30, 45, 60"
         default: return ""
         }
     }
