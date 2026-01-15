@@ -6,74 +6,86 @@
 import SwiftUI
 
 /// Animated splash screen where "L" expands to spell "Learnt"
+/// Total duration: ~4.5 seconds for a polished, unhurried feel
 struct SplashView: View {
-    // Simplified animation state - single progress value
-    @State private var showL = false
-    @State private var expandLetters = false
-    @State private var showTagline = false
+    // Animation phases
+    @State private var phase = 0
 
-    // Computed values based on animation progress
-    private var lScale: CGFloat { expandLetters ? 1.0 : 1.3 }
-    private var xOffset: CGFloat { expandLetters ? 0 : 75 }
+    // Phase 0: Nothing visible
+    // Phase 1: L appears (large, centered)
+    // Phase 2: L shifts left & shrinks, "earnt" letters fade in
+    // Phase 3: Tagline fades in
+
+    // Smooth spring animation for the main transition
+    private let smoothSpring = Animation.spring(response: 0.9, dampingFraction: 0.85)
 
     var body: some View {
         ZStack {
             Color.appBackgroundColor
                 .ignoresSafeArea()
 
-            VStack(spacing: 16) {
-                // The word "Learnt" - use drawingGroup for smoother rendering
+            VStack(spacing: 20) {
+                // The word "Learnt"
                 HStack(spacing: 0) {
+                    // The "L" - always present after phase 1
                     Text("L")
                         .font(.system(size: 52, weight: .medium, design: .serif))
                         .foregroundStyle(Color.primaryTextColor)
-                        .scaleEffect(lScale)
-                        .opacity(showL ? 1 : 0)
+                        .scaleEffect(phase >= 2 ? 1.0 : 1.25)
+                        .opacity(phase >= 1 ? 1 : 0)
 
-                    ForEach(Array("earnt".enumerated()), id: \.offset) { index, letter in
-                        Text(String(letter))
-                            .font(.system(size: 52, weight: .medium, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                            .opacity(expandLetters ? 1 : 0)
-                            .scaleEffect(expandLetters ? 1 : 0.5)
-                            .animation(
-                                .easeOut(duration: 0.35).delay(Double(index) * 0.08),
-                                value: expandLetters
-                            )
-                    }
+                    // Each letter with staggered timing
+                    letterView("e", delay: 0.0)
+                    letterView("a", delay: 0.08)
+                    letterView("r", delay: 0.16)
+                    letterView("n", delay: 0.24)
+                    letterView("t", delay: 0.32)
                 }
-                .offset(x: xOffset)
-                .animation(.easeInOut(duration: 0.6), value: expandLetters)
-                .drawingGroup() // Flatten to single layer for smoother animation
+                .offset(x: phase >= 2 ? 0 : 70)
+                .animation(smoothSpring, value: phase)
 
                 // Tagline
                 Text("Capture what you learn")
                     .font(.system(size: 16, weight: .regular, design: .serif))
                     .foregroundStyle(Color.secondaryTextColor)
-                    .opacity(showTagline ? 1 : 0)
-                    .offset(y: showTagline ? 0 : 8)
-                    .animation(.easeOut(duration: 0.4), value: showTagline)
+                    .opacity(phase >= 3 ? 1 : 0)
+                    .offset(y: phase >= 3 ? 0 : 12)
+                    .animation(.easeOut(duration: 0.8), value: phase)
             }
         }
         .onAppear {
-            startAnimation()
+            runAnimation()
         }
     }
 
-    private func startAnimation() {
-        // Phase 1: Show the L
-        withAnimation(.easeOut(duration: 0.3)) {
-            showL = true
+    private func letterView(_ letter: String, delay: Double) -> some View {
+        Text(letter)
+            .font(.system(size: 52, weight: .medium, design: .serif))
+            .foregroundStyle(Color.primaryTextColor)
+            .opacity(phase >= 2 ? 1 : 0)
+            .scaleEffect(phase >= 2 ? 1 : 0.3)
+            .animation(
+                .spring(response: 0.6, dampingFraction: 0.75).delay(delay),
+                value: phase
+            )
+    }
+
+    private func runAnimation() {
+        // Phase 1: Show the L (after brief delay for view to settle)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeOut(duration: 0.5)) {
+                phase = 1
+            }
         }
 
-        // Phase 2: Expand letters (after brief pause)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            expandLetters = true
+        // Phase 2: Expand to full word (L shifts, letters appear)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            phase = 2
         }
 
         // Phase 3: Show tagline
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-            showTagline = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
+            phase = 3
         }
     }
 }
