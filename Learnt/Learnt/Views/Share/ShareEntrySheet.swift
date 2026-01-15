@@ -108,7 +108,8 @@ struct ShareEntrySheet: View {
                     if !shareAsText {
                         Button(action: { useDarkMode.toggle() }) {
                             Image(systemName: useDarkMode ? "sun.max" : "moon")
-                                .font(.system(size: 16))
+                                .font(.system(size: 16, weight: .medium))
+                                .frame(width: 28, height: 28)
                                 .foregroundStyle(Color.primaryTextColor)
                         }
                     }
@@ -121,7 +122,8 @@ struct ShareEntrySheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16))
+                            .font(.system(size: 14, weight: .medium))
+                            .frame(width: 28, height: 28)
                             .foregroundStyle(Color.primaryTextColor)
                     }
                 }

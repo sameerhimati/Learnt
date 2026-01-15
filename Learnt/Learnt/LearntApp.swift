@@ -60,7 +60,7 @@ struct LearntApp: App {
             .onAppear {
                 // Initialize data
                 let context = sharedModelContainer.mainContext
-                MockDataService.populateMockData(modelContext: context)
+                // MockDataService.populateMockData(modelContext: context)  // Disabled for testing
 
                 let categoryService = CategoryService(modelContext: context)
                 categoryService.ensurePresetsExist()

@@ -44,7 +44,9 @@ struct WrappedView: View {
     @State private var sharePreviewData: SharePreviewData?
 
     private var displaySummary: String? {
-        currentSummary ?? currentMonth.aiSummary
+        // Don't show any summary if we don't meet minimum requirements
+        guard canGenerateAISummary else { return nil }
+        return currentSummary ?? currentMonth.aiSummary
     }
 
     /// Check if AI summary generation is allowed based on learning count
@@ -103,14 +105,16 @@ struct WrappedView: View {
                         sharePreviewData = SharePreviewData(data: currentMonth, summary: displaySummary)
                     }) {
                         Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 16))
+                            .font(.system(size: 16, weight: .medium))
+                            .frame(width: 28, height: 28)
                             .foregroundStyle(Color.primaryTextColor)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16))
+                            .font(.system(size: 14, weight: .medium))
+                            .frame(width: 28, height: 28)
                             .foregroundStyle(Color.primaryTextColor)
                     }
                 }
@@ -362,7 +366,8 @@ struct PastMonthDetailView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: { onShare(data) }) {
                         Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 16))
+                            .font(.system(size: 16, weight: .medium))
+                            .frame(width: 28, height: 28)
                             .foregroundStyle(Color.primaryTextColor)
                     }
                 }
@@ -374,7 +379,8 @@ struct PastMonthDetailView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16))
+                            .font(.system(size: 14, weight: .medium))
+                            .frame(width: 28, height: 28)
                             .foregroundStyle(Color.primaryTextColor)
                     }
                 }
@@ -625,7 +631,8 @@ struct WrappedSharePreview: View {
                     if !shareAsText {
                         Button(action: { useDarkMode.toggle() }) {
                             Image(systemName: useDarkMode ? "sun.max" : "moon")
-                                .font(.system(size: 16))
+                                .font(.system(size: 16, weight: .medium))
+                                .frame(width: 28, height: 28)
                                 .foregroundStyle(Color.primaryTextColor)
                         }
                     }
@@ -638,7 +645,8 @@ struct WrappedSharePreview: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16))
+                            .font(.system(size: 14, weight: .medium))
+                            .frame(width: 28, height: 28)
                             .foregroundStyle(Color.primaryTextColor)
                     }
                 }

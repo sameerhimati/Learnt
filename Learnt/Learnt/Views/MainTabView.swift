@@ -66,8 +66,8 @@ struct MainTabView: View {
     private func generateAISummary(for monthDate: Date, completion: @escaping (String) -> Void) {
         let monthEntries = entriesForMonth(monthDate)
 
+        // Don't generate if no entries - let the UI show the placeholder
         guard !monthEntries.isEmpty else {
-            completion("Keep learning, keep growing")
             return
         }
 

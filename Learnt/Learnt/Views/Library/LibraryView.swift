@@ -94,7 +94,8 @@ struct LibraryView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16))
+                            .font(.system(size: 14, weight: .medium))
+                            .frame(width: 28, height: 28)
                             .foregroundStyle(Color.primaryTextColor)
                     }
                 }
@@ -340,12 +341,14 @@ struct LibraryEntryDetailView: View {
                     HStack(spacing: 16) {
                         Button(action: { showEditSheet = true }) {
                             Image(systemName: "pencil")
-                                .font(.system(size: 16))
+                                .font(.system(size: 16, weight: .medium))
+                                .frame(width: 28, height: 28)
                                 .foregroundStyle(Color.primaryTextColor)
                         }
                         Button(action: { showShareSheet = true }) {
                             Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 16))
+                                .font(.system(size: 16, weight: .medium))
+                                .frame(width: 28, height: 28)
                                 .foregroundStyle(Color.primaryTextColor)
                         }
                     }
@@ -353,7 +356,8 @@ struct LibraryEntryDetailView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16))
+                            .font(.system(size: 14, weight: .medium))
+                            .frame(width: 28, height: 28)
                             .foregroundStyle(Color.primaryTextColor)
                     }
                 }

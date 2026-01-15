@@ -10,7 +10,16 @@ struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allEntries: [LearningEntry]
 
-    @State private var selectedDate = Date()
+    // Use SceneStorage to persist selected date across tab switches
+    @SceneStorage("selectedDate") private var selectedDateTimestamp: Double = Date().timeIntervalSince1970
+
+    private var selectedDate: Date {
+        get { Date(timeIntervalSince1970: selectedDateTimestamp) }
+    }
+
+    private func setSelectedDate(_ date: Date) {
+        selectedDateTimestamp = date.timeIntervalSince1970
+    }
     @State private var showCalendar = false
     @State private var showAddLearning = false
     @State private var showShareSheet = false
@@ -247,7 +256,6 @@ struct TodayView: View {
                         .foregroundStyle(Color.primaryTextColor)
                 }
                 .buttonStyle(.plain)
-                .disabled(selectedDate.isToday)
 
                 Button(action: { navigateTo(selectedDate.tomorrow) }) {
                     Image(systemName: "chevron.right")
@@ -348,7 +356,7 @@ struct TodayView: View {
         guard !date.isFuture else { return }
 
         withAnimation(.easeInOut(duration: 0.2)) {
-            selectedDate = date.startOfDay
+            setSelectedDate(date.startOfDay)
         }
     }
 
