@@ -34,14 +34,6 @@ struct TodayView: View {
             .sorted { ($0.sortOrder, $0.createdAt) < ($1.sortOrder, $1.createdAt) }
     }
 
-    private var datesWithEntries: Set<Date> {
-        Set(allEntries.filter { date in
-            let weekStart = selectedDate.startOfWeek
-            let weekEnd = selectedDate.endOfWeek
-            return date.date >= weekStart && date.date <= weekEnd
-        }.map { $0.date.startOfDay })
-    }
-
     private var canGoForward: Bool {
         !selectedDate.isSameDay(as: Date()) && selectedDate < Date()
     }
@@ -52,19 +44,8 @@ struct TodayView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header
+                // Header with arrow navigation
                 headerView
-
-                // Week Activity Row
-                WeekActivityRow(
-                    selectedDate: selectedDate,
-                    datesWithEntries: datesWithEntries,
-                    onDateSelected: navigateTo,
-                    onWeekChange: { weeks in
-                        let newDate = selectedDate.adding(days: weeks * 7)
-                        navigateTo(newDate)
-                    }
-                )
 
                 Divider()
                     .background(Color.dividerColor)
@@ -235,9 +216,27 @@ struct TodayView: View {
 
     private var headerView: some View {
         HStack {
-            Text(selectedDate.formattedFull)
-                .font(.system(.title2, design: .serif))
-                .foregroundStyle(Color.primaryTextColor)
+            // Navigation arrows + date
+            HStack(spacing: 8) {
+                Button(action: { navigateTo(selectedDate.yesterday) }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+                .buttonStyle(.plain)
+
+                Text(selectedDate.formattedFull)
+                    .font(.system(.title2, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+
+                Button(action: { navigateTo(selectedDate.tomorrow) }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(canGoForward ? Color.secondaryTextColor : Color.secondaryTextColor.opacity(0.3))
+                }
+                .buttonStyle(.plain)
+                .disabled(!canGoForward)
+            }
 
             Spacer()
 
