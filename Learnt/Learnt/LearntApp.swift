@@ -68,8 +68,8 @@ struct LearntApp: App {
                     await NotificationService.shared.updateAuthorizationStatus()
                 }
 
-                // Dismiss splash after brief delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                // Dismiss splash after animation completes (~3 seconds)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                     withAnimation(.easeInOut(duration: 0.4)) {
                         showSplash = false
                     }
