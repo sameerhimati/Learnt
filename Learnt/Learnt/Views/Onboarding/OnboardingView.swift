@@ -5,10 +5,12 @@
 
 import SwiftUI
 
-/// 3-screen onboarding flow for first-time users
+/// 4-screen onboarding flow for first-time users
 struct OnboardingView: View {
     @State private var currentPage = 0
     let onComplete: () -> Void
+
+    private let totalPages = 4
 
     var body: some View {
         ZStack {
@@ -23,11 +25,14 @@ struct OnboardingView: View {
                     welcomePage
                         .tag(0)
 
-                    howItWorksPage
+                    privacyPage
                         .tag(1)
 
-                    getStartedPage
+                    howItWorksPage
                         .tag(2)
+
+                    getStartedPage
+                        .tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -35,7 +40,7 @@ struct OnboardingView: View {
 
                 // Page indicator
                 HStack(spacing: 8) {
-                    ForEach(0..<3, id: \.self) { index in
+                    ForEach(0..<totalPages, id: \.self) { index in
                         Circle()
                             .fill(index == currentPage ? Color.primaryTextColor : Color.secondaryTextColor.opacity(0.3))
                             .frame(width: 8, height: 8)
@@ -45,7 +50,7 @@ struct OnboardingView: View {
 
                 // Button
                 Button(action: handleButtonTap) {
-                    Text(currentPage == 2 ? "Get Started" : "Continue")
+                    Text(currentPage == totalPages - 1 ? "Get Started" : "Continue")
                         .font(.system(.body, design: .serif, weight: .medium))
                         .foregroundStyle(Color.appBackgroundColor)
                         .frame(maxWidth: .infinity)
@@ -77,14 +82,52 @@ struct OnboardingView: View {
         .padding(.horizontal, 32)
     }
 
-    private var howItWorksPage: some View {
+    private var privacyPage: some View {
         VStack(spacing: 40) {
             VStack(spacing: 12) {
-                Text("How It Works")
+                Image(systemName: "lock.shield")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundStyle(Color.primaryTextColor)
+                    .padding(.bottom, 8)
+
+                Text("Your Data, Your Device")
                     .font(.system(size: 28, weight: .medium, design: .serif))
                     .foregroundStyle(Color.primaryTextColor)
 
-                Text("Simple, intentional learning")
+                Text("Private by design")
+                    .font(.system(size: 17, weight: .regular, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+            }
+
+            VStack(alignment: .leading, spacing: 20) {
+                privacyRow(
+                    icon: "iphone",
+                    text: "Everything stays on your device"
+                )
+
+                privacyRow(
+                    icon: "xmark.shield",
+                    text: "No accounts, no cloud, no tracking"
+                )
+
+                privacyRow(
+                    icon: "eye.slash",
+                    text: "We never see what you write"
+                )
+            }
+            .padding(.horizontal, 16)
+        }
+        .padding(.horizontal, 32)
+    }
+
+    private var howItWorksPage: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Text("Simple & Intentional")
+                    .font(.system(size: 28, weight: .medium, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+
+                Text("Distraction-free learning")
                     .font(.system(size: 17, weight: .regular, design: .serif))
                     .foregroundStyle(Color.secondaryTextColor)
             }
@@ -97,15 +140,15 @@ struct OnboardingView: View {
                 )
 
                 featureRow(
-                    icon: "calendar",
-                    title: "Daily Reflection",
-                    description: "Build a habit of learning"
+                    icon: "brain.head.profile",
+                    title: "Spaced Repetition",
+                    description: "Science-backed review intervals"
                 )
 
                 featureRow(
-                    icon: "arrow.counterclockwise",
-                    title: "Spaced Repetition",
-                    description: "Review at optimal intervals"
+                    icon: "arrow.up.right",
+                    title: "Graduate Learnings",
+                    description: "Move knowledge to long-term memory"
                 )
             }
             .padding(.horizontal, 16)
@@ -136,6 +179,21 @@ struct OnboardingView: View {
 
     // MARK: - Components
 
+    private func privacyRow(icon: String, text: String) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundStyle(Color.primaryTextColor)
+                .frame(width: 32)
+
+            Text(text)
+                .font(.system(size: 16, weight: .regular, design: .serif))
+                .foregroundStyle(Color.primaryTextColor)
+
+            Spacer()
+        }
+    }
+
     private func featureRow(icon: String, title: String, description: String) -> some View {
         HStack(spacing: 16) {
             Image(systemName: icon)
@@ -162,7 +220,7 @@ struct OnboardingView: View {
     // MARK: - Actions
 
     private func handleButtonTap() {
-        if currentPage < 2 {
+        if currentPage < totalPages - 1 {
             withAnimation {
                 currentPage += 1
             }

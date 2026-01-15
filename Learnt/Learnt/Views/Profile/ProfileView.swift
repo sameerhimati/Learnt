@@ -17,6 +17,7 @@ struct ProfileView: View {
     @State private var showAppearancePicker = false
     @State private var selectedStatExplanation: StatType?
     @State private var showTutorialResetAlert = false
+    @State private var dailyQuotesEnabled: Bool = SettingsService.shared.dailyQuotesEnabled
 
     // Settings observation for reminder subtitle updates
     private var settings: SettingsService { SettingsService.shared }
@@ -635,16 +636,16 @@ struct ProfileView: View {
 
                 Spacer()
 
-                Toggle("", isOn: Binding(
-                    get: { settings.dailyQuotesEnabled },
-                    set: { settings.dailyQuotesEnabled = $0 }
-                ))
-                .labelsHidden()
-                .toggleStyle(MonochromeToggleStyle())
+                Toggle("", isOn: $dailyQuotesEnabled)
+                    .labelsHidden()
+                    .toggleStyle(MonochromeToggleStyle())
             }
             .padding(16)
             .background(Color.inputBackgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .onChange(of: dailyQuotesEnabled) { _, newValue in
+                settings.dailyQuotesEnabled = newValue
+            }
 
             // Replay Tutorial button
             Button(action: {

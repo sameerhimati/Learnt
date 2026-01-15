@@ -20,6 +20,7 @@ struct TodayView: View {
     @State private var isQuoteHidden = QuoteService.shared.isQuoteHidden
     @State private var entryToShare: LearningEntry?
     @State private var showLibrary = false
+    @State private var dailyQuotesEnabled = SettingsService.shared.dailyQuotesEnabled
 
     private let quoteService = QuoteService.shared
     private var settings: SettingsService { SettingsService.shared }
@@ -72,7 +73,7 @@ struct TodayView: View {
                 if entriesForSelectedDate.isEmpty {
                     VStack(spacing: 0) {
                         // Quote of the day (only on today, when enabled and not hidden)
-                        if selectedDate.isToday && settings.dailyQuotesEnabled && !isQuoteHidden {
+                        if selectedDate.isToday && dailyQuotesEnabled && !isQuoteHidden {
                             QuoteCard(
                                 quote: quoteService.quoteOfTheDay,
                                 onAddToEntry: { quoteText in
@@ -222,6 +223,18 @@ struct TodayView: View {
         }
         .sheet(isPresented: $showLibrary) {
             LibraryView()
+        }
+        .onAppear {
+            // Sync with settings in case they changed
+            dailyQuotesEnabled = settings.dailyQuotesEnabled
+        }
+        .onChange(of: settings.dailyQuotesEnabled) { _, newValue in
+            dailyQuotesEnabled = newValue
+            // When toggled ON, show the quote again
+            if newValue {
+                quoteService.showQuote()
+                isQuoteHidden = false
+            }
         }
     }
 
