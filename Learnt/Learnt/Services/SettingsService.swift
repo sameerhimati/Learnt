@@ -271,6 +271,29 @@ final class SettingsService {
         return formatter.string(from: date)
     }
 
+    // MARK: - AI Summary Learning Count (for current month regeneration)
+
+    private var monthlySummaryCountsKey: String { "monthlySummaryCounts" }
+
+    /// Get stored learning count for when AI summary was generated
+    func getAISummaryLearningCount(for monthKey: String) -> Int? {
+        let counts = UserDefaults.standard.dictionary(forKey: monthlySummaryCountsKey) as? [String: Int] ?? [:]
+        return counts[monthKey]
+    }
+
+    /// Store learning count when AI summary was generated
+    func setAISummaryLearningCount(_ count: Int, for monthKey: String) {
+        var counts = UserDefaults.standard.dictionary(forKey: monthlySummaryCountsKey) as? [String: Int] ?? [:]
+        counts[monthKey] = count
+        UserDefaults.standard.set(counts, forKey: monthlySummaryCountsKey)
+    }
+
+    /// Check if a month is in the past (not current month)
+    func isMonthPast(_ monthKey: String) -> Bool {
+        let currentKey = self.monthKey(from: Date())
+        return monthKey < currentKey
+    }
+
     // MARK: - Defaults
 
     private var defaultCaptureTime: Date {

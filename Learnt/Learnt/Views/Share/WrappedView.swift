@@ -47,6 +47,24 @@ struct WrappedView: View {
         currentSummary ?? currentMonth.aiSummary
     }
 
+    /// Check if AI summary generation is allowed based on learning count
+    /// - Requires at least 5 learnings, OR
+    /// - It's the 1st of the month with at least 1 learning
+    private var canGenerateAISummary: Bool {
+        let count = currentMonth.totalLearnings
+        if count >= 5 { return true }
+
+        // Allow on 1st of month with at least 1 learning
+        let calendar = Calendar.current
+        let isFirstOfMonth = calendar.component(.day, from: Date()) == 1
+        return isFirstOfMonth && count >= 1
+    }
+
+    private var insufficientLearningsMessage: String {
+        let needed = 5 - currentMonth.totalLearnings
+        return "Add \(needed) more learning\(needed == 1 ? "" : "s") to unlock AI insights"
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -129,8 +147,14 @@ struct WrappedView: View {
     private func loadOrGenerateSummary() {
         let monthKey = settings.monthKey(from: currentMonth.monthDate)
 
-        // Check if we already have a stored summary
-        if let stored = settings.getAISummary(for: monthKey) {
+        // For current month, always regenerate to reflect latest learnings
+        // (Summary will be locked when the month ends)
+
+        // Check if we have a stored summary AND the stored learning count matches
+        // This allows regeneration when user adds more learnings
+        if let stored = settings.getAISummary(for: monthKey),
+           let storedCount = settings.getAISummaryLearningCount(for: monthKey),
+           storedCount == currentMonth.totalLearnings {
             currentSummary = stored
             return
         }
@@ -140,11 +164,17 @@ struct WrappedView: View {
             return
         }
 
+        // Don't generate if insufficient learnings
+        guard canGenerateAISummary else {
+            return
+        }
+
         // Generate new summary
         isLoadingSummary = true
         onGenerateSummary(currentMonth.monthDate) { summary in
-            // Store it
+            // Store it with learning count so we know when to regenerate
             settings.setAISummary(summary, for: monthKey)
+            settings.setAISummaryLearningCount(currentMonth.totalLearnings, for: monthKey)
             currentSummary = summary
             isLoadingSummary = false
         }
@@ -219,6 +249,12 @@ struct WrappedView: View {
                         .foregroundStyle(Color.primaryTextColor)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
+                } else if isCurrent && !canGenerateAISummary {
+                    // Not enough learnings message
+                    Text(insufficientLearningsMessage)
+                        .font(.system(.body, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+                        .multilineTextAlignment(.center)
                 } else {
                     Text("Keep learning, keep growing")
                         .font(.system(.body, design: .serif))
@@ -437,19 +473,30 @@ struct PastMonthDetailView: View {
         }
     }
 
+    /// Check if AI summary generation is allowed based on learning count
+    /// Past months: require at least 1 learning (since they're locked, we only generate once)
+    private var canGenerateAISummary: Bool {
+        data.totalLearnings >= 1
+    }
+
     private func loadOrGenerateSummary() {
         let monthKey = settings.monthKey(from: data.monthDate)
 
-        // Check if we already have a stored summary
+        // Past months are locked - use stored summary if exists
         if let stored = settings.getAISummary(for: monthKey) {
             summary = stored
             return
         }
 
-        // Generate new summary on-demand
+        // Don't generate if no learnings
+        guard canGenerateAISummary else {
+            return
+        }
+
+        // Generate new summary for past month (will be locked permanently)
         isLoading = true
         onGenerateSummary(data.monthDate) { newSummary in
-            // Store it permanently
+            // Store it permanently (past months are locked)
             settings.setAISummary(newSummary, for: monthKey)
             summary = newSummary
             isLoading = false
