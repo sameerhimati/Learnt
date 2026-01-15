@@ -225,16 +225,9 @@ struct TodayView: View {
             LibraryView()
         }
         .onAppear {
-            // Sync with settings in case they changed
-            dailyQuotesEnabled = settings.dailyQuotesEnabled
-        }
-        .onChange(of: settings.dailyQuotesEnabled) { _, newValue in
-            dailyQuotesEnabled = newValue
-            // When toggled ON, show the quote again
-            if newValue {
-                quoteService.showQuote()
-                isQuoteHidden = false
-            }
+            // Always sync with settings in case they changed while on another tab
+            dailyQuotesEnabled = SettingsService.shared.dailyQuotesEnabled
+            isQuoteHidden = quoteService.isQuoteHidden
         }
     }
 

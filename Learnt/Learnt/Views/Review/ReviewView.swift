@@ -40,30 +40,34 @@ struct ReviewView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    if allEntries.isEmpty {
-                        emptyState
-                    } else {
-                        // Streak badge (if active)
-                        if settings.reviewStreak > 0 {
-                            streakBadge
+            ZStack {
+                Color.appBackgroundColor
+                    .ignoresSafeArea()
+
+                if allEntries.isEmpty {
+                    emptyState
+                } else {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // Streak badge (if active)
+                            if settings.reviewStreak > 0 {
+                                streakBadge
+                            }
+
+                            // Ready for review section
+                            reviewReadySection
+
+                            // Stats section
+                            statsSection
+
+                            // Science-backed explanation
+                            scienceNote
                         }
-
-                        // Ready for review section
-                        reviewReadySection
-
-                        // Stats section
-                        statsSection
-
-                        // Science-backed explanation
-                        scienceNote
+                        .padding(16)
+                        .padding(.bottom, 80)
                     }
                 }
-                .padding(16)
-                .padding(.bottom, 80)
             }
-            .background(Color.appBackgroundColor)
             .navigationTitle("Review")
             .navigationBarTitleDisplayMode(.large)
             .fullScreenCover(isPresented: $showReviewSession) {
@@ -78,25 +82,30 @@ struct ReviewView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 24) {
             Spacer()
-                .frame(height: 100)
 
             Image(systemName: "brain.head.profile")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                .font(.system(size: 56, weight: .light))
+                .foregroundStyle(Color.secondaryTextColor.opacity(0.4))
 
-            Text("No learnings to review")
-                .font(.system(.title3, design: .serif))
-                .foregroundStyle(Color.secondaryTextColor)
+            VStack(spacing: 8) {
+                Text("No learnings yet")
+                    .font(.system(.title2, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
 
-            Text("Add learnings in the Today tab\nand they'll appear here for review")
-                .font(.system(.body, design: .serif))
-                .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
-                .multilineTextAlignment(.center)
+                Text("Add your first learning in the Today tab.\nThey'll appear here for spaced review.")
+                    .font(.system(.body, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
 
             Spacer()
+            Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 32)
     }
 
     // MARK: - Streak Badge

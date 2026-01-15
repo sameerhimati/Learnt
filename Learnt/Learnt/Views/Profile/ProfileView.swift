@@ -340,15 +340,11 @@ struct ProfileView: View {
                     mainStatsSection
                         .padding(.top, 16)
 
-                    // Review stats
-                    if totalEntries > 0 {
-                        reviewStatsSection
-                    }
+                    // Review stats (always show, even when zero)
+                    reviewStatsSection
 
-                    // Share section
-                    if totalEntries > 0 {
-                        shareSection
-                    }
+                    // Share section (always show)
+                    shareSection
 
                     Divider()
                         .background(Color.dividerColor)
@@ -645,6 +641,10 @@ struct ProfileView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .onChange(of: dailyQuotesEnabled) { _, newValue in
                 settings.dailyQuotesEnabled = newValue
+                if newValue {
+                    // When re-enabling quotes, also clear "hidden for today" flag
+                    QuoteService.shared.showQuote()
+                }
             }
 
             // Replay Tutorial button
@@ -1007,7 +1007,7 @@ struct AppearanceSettingsSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
     }
 
     private func iconFor(_ mode: SettingsService.AppearanceMode) -> String {
