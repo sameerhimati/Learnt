@@ -412,14 +412,23 @@ private class RecordingPlaybackManager: NSObject, ObservableObject, AVAudioPlaye
 // MARK: - Monochrome Toggle Style
 
 struct MonochromeToggleStyle: ToggleStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var trackOffColor: Color {
+        // More visible off state in dark mode
+        colorScheme == .dark ? Color.secondaryTextColor.opacity(0.4) : Color.dividerColor
+    }
+
     func makeBody(configuration: Configuration) -> some View {
         HStack {
             configuration.label
 
+            Spacer()
+
             ZStack {
-                // Track
+                // Track with animated color
                 Capsule()
-                    .fill(configuration.isOn ? Color.primaryTextColor : Color.dividerColor)
+                    .fill(configuration.isOn ? Color.primaryTextColor : trackOffColor)
                     .frame(width: 51, height: 31)
 
                 // Thumb with border for contrast
@@ -427,14 +436,17 @@ struct MonochromeToggleStyle: ToggleStyle {
                     .fill(Color.appBackgroundColor)
                     .overlay(
                         Circle()
-                            .stroke(configuration.isOn ? Color.primaryTextColor : Color.dividerColor, lineWidth: 0.5)
+                            .stroke(configuration.isOn ? Color.primaryTextColor : Color.secondaryTextColor.opacity(0.5), lineWidth: 0.5)
                     )
+                    .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
                     .frame(width: 27, height: 27)
                     .offset(x: configuration.isOn ? 10 : -10)
-                    .animation(.easeInOut(duration: 0.15), value: configuration.isOn)
             }
+            .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
             .onTapGesture {
-                configuration.isOn.toggle()
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    configuration.isOn.toggle()
+                }
             }
         }
     }

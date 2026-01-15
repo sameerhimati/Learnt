@@ -102,9 +102,7 @@ struct TodayView: View {
                 .navigateDays,
                 title: "Browse Your History",
                 message: "Swipe left or right to see previous days, or tap the calendar icon.",
-                arrowDirection: .none,
-                alignment: .center,
-                offset: CGSize(width: 0, height: 0)
+                arrowDirection: .none
             )
 
             // Floating + button (bottom right) - only when there are entries
@@ -349,9 +347,7 @@ private struct FirstCardCoachMark: ViewModifier {
                     .expandCard,
                     title: "Tap to Expand",
                     message: "Tap any card to see details, edit, add reflections, or share.",
-                    arrowDirection: .up,
-                    alignment: .bottom,
-                    offset: CGSize(width: 0, height: 16)
+                    arrowDirection: .down
                 )
         } else {
             content

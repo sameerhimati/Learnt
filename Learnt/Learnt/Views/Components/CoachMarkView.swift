@@ -5,9 +5,11 @@
 
 import SwiftUI
 
-enum CoachMarkArrowDirection {
+enum CoachMarkArrowDirection: Equatable {
     case up, down, left, right, none
 }
+
+// MARK: - Coach Mark View
 
 struct CoachMarkView: View {
     let title: String
@@ -15,17 +17,41 @@ struct CoachMarkView: View {
     let arrowDirection: CoachMarkArrowDirection
     let onDismiss: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+
+    // Use consistent colors regardless of system theme - always dark bubble
+    private var bubbleBackground: Color {
+        Color(hex: "1A1A1A")
+    }
+
+    private var bubbleText: Color {
+        Color(hex: "FAFAFA")
+    }
+
+    private var buttonBackground: Color {
+        Color(hex: "FAFAFA")
+    }
+
+    private var buttonText: Color {
+        Color(hex: "1A1A1A")
+    }
+
+    // Border color for visibility on dark backgrounds
+    private var borderColor: Color {
+        Color(hex: "3A3A3A")
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if arrowDirection == .up {
-                arrow
+                arrowWithBorder
                     .rotationEffect(.degrees(0))
                     .padding(.bottom, -1)
             }
 
             HStack {
                 if arrowDirection == .left {
-                    arrow
+                    arrowWithBorder
                         .rotationEffect(.degrees(-90))
                         .padding(.trailing, -1)
                 }
@@ -33,40 +59,41 @@ struct CoachMarkView: View {
                 content
 
                 if arrowDirection == .right {
-                    arrow
+                    arrowWithBorder
                         .rotationEffect(.degrees(90))
                         .padding(.leading, -1)
                 }
             }
 
             if arrowDirection == .down {
-                arrow
+                arrowWithBorder
                     .rotationEffect(.degrees(180))
                     .padding(.top, -1)
             }
         }
+        .shadow(color: Color.black.opacity(0.5), radius: 20, x: 0, y: 8)
     }
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.system(.body, design: .serif, weight: .semibold))
-                .foregroundStyle(Color.appBackgroundColor)
+                .foregroundStyle(bubbleText)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(message)
                 .font(.system(.subheadline, design: .serif))
-                .foregroundStyle(Color.appBackgroundColor.opacity(0.9))
+                .foregroundStyle(bubbleText.opacity(0.9))
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
 
             Button(action: onDismiss) {
                 Text("Got it")
                     .font(.system(.subheadline, design: .serif, weight: .medium))
-                    .foregroundStyle(Color.primaryTextColor)
+                    .foregroundStyle(buttonText)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
-                    .background(Color.appBackgroundColor)
+                    .background(buttonBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
@@ -74,14 +101,28 @@ struct CoachMarkView: View {
         }
         .padding(20)
         .frame(minWidth: 260, maxWidth: 300)
-        .background(Color.primaryTextColor)
+        .background(bubbleBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(borderColor, lineWidth: 1)
+        )
     }
 
     private var arrow: some View {
         Triangle()
-            .fill(Color.primaryTextColor)
+            .fill(bubbleBackground)
             .frame(width: 16, height: 10)
+    }
+
+    private var arrowWithBorder: some View {
+        Triangle()
+            .fill(bubbleBackground)
+            .overlay(
+                Triangle()
+                    .stroke(borderColor, lineWidth: 1.5)
+            )
+            .frame(width: 20, height: 12)
     }
 }
 
@@ -96,51 +137,143 @@ struct Triangle: Shape {
     }
 }
 
-// MARK: - Coach Mark Overlay Modifier
+// MARK: - Global Coach Mark Coordinator
 
-struct CoachMarkOverlay: ViewModifier {
+@Observable
+final class CoachMarkCoordinator {
+    static let shared = CoachMarkCoordinator()
+
+    var currentMark: CoachMarkService.Mark?
+    var isShowingOverlay = false
+
+    private init() {}
+
+    func showMark(_ mark: CoachMarkService.Mark) {
+        guard CoachMarkService.shared.shouldShowMark(mark) else { return }
+        withAnimation(.easeOut(duration: 0.3)) {
+            currentMark = mark
+            isShowingOverlay = true
+        }
+    }
+
+    func dismissCurrent() {
+        guard let mark = currentMark else { return }
+        withAnimation(.easeOut(duration: 0.2)) {
+            isShowingOverlay = false
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            CoachMarkService.shared.markAsSeen(mark)
+            self.currentMark = nil
+        }
+    }
+}
+
+// MARK: - Coach Mark Registration (marks a view as a coach mark target)
+
+struct CoachMarkTargetModifier: ViewModifier {
     let mark: CoachMarkService.Mark
     let title: String
     let message: String
     let arrowDirection: CoachMarkArrowDirection
-    let alignment: Alignment
-    let offset: CGSize
 
-    @State private var isVisible = false
-    private let coachService = CoachMarkService.shared
+    @State private var hasTriggered = false
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: alignment) {
-                if isVisible {
-                    CoachMarkView(
-                        title: title,
-                        message: message,
-                        arrowDirection: arrowDirection,
-                        onDismiss: {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                coachService.markAsSeen(mark)
-                                isVisible = false
-                            }
-                        }
-                    )
-                    .offset(offset)
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                    .zIndex(1000)
-                }
-            }
             .onAppear {
-                // Delay slightly so the view is fully loaded
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if coachService.shouldShowMark(mark) {
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            isVisible = true
-                        }
+                // Delay to ensure view is laid out
+                guard !hasTriggered else { return }
+                hasTriggered = true
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    if CoachMarkService.shared.shouldShowMark(mark) {
+                        CoachMarkCoordinator.shared.showMark(mark)
                     }
                 }
             }
     }
 }
+
+// MARK: - Global Coach Mark Overlay
+
+struct GlobalCoachMarkOverlay: View {
+    @State private var coordinator = CoachMarkCoordinator.shared
+    private let coachService = CoachMarkService.shared
+
+    var body: some View {
+        ZStack {
+            if coordinator.isShowingOverlay, let mark = coordinator.currentMark {
+                // Full screen dimming
+                Color.black.opacity(0.6)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        coordinator.dismissCurrent()
+                    }
+                    .transition(.opacity)
+
+                // Coach mark centered
+                VStack {
+                    Spacer()
+
+                    CoachMarkView(
+                        title: titleFor(mark),
+                        message: messageFor(mark),
+                        arrowDirection: arrowFor(mark),
+                        onDismiss: {
+                            coordinator.dismissCurrent()
+                        }
+                    )
+                    .padding(.horizontal, 32)
+
+                    Spacer()
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.easeOut(duration: 0.25), value: coordinator.isShowingOverlay)
+        .onReceive(NotificationCenter.default.publisher(for: .coachMarkDismissed)) { _ in
+            // When a mark is dismissed, check if another should show
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                checkForNextMark()
+            }
+        }
+    }
+
+    private func checkForNextMark() {
+        // This will be triggered by individual view modifiers
+    }
+
+    private func titleFor(_ mark: CoachMarkService.Mark) -> String {
+        switch mark {
+        case .addLearning: return "Add a Learning"
+        case .expandCard: return "Tap to Expand"
+        case .navigateDays: return "Browse Your History"
+        case .reviewDue: return "Spaced Repetition"
+        case .yourMonth: return "Your Month"
+        case .reflections: return "Add Reflections"
+        }
+    }
+
+    private func messageFor(_ mark: CoachMarkService.Mark) -> String {
+        switch mark {
+        case .addLearning: return "Tap here to capture something you learned today. Use voice or text."
+        case .expandCard: return "Tap any card to see details, edit, add reflections, or share."
+        case .navigateDays: return "Swipe left or right to see previous days, or tap the calendar icon."
+        case .reviewDue: return "Review learnings at optimal intervals to move them into long-term memory."
+        case .yourMonth: return "View your monthly learning summary with stats and insights."
+        case .reflections: return "Add notes about how to apply what you learned or questions that arose."
+        }
+    }
+
+    private func arrowFor(_ mark: CoachMarkService.Mark) -> CoachMarkArrowDirection {
+        switch mark {
+        case .navigateDays: return .none
+        default: return .none  // Centered overlay doesn't need arrows
+        }
+    }
+}
+
+// MARK: - View Extension
 
 extension View {
     func coachMark(
@@ -151,14 +284,18 @@ extension View {
         alignment: Alignment = .bottom,
         offset: CGSize = .zero
     ) -> some View {
-        modifier(CoachMarkOverlay(
+        modifier(CoachMarkTargetModifier(
             mark: mark,
             title: title,
             message: message,
-            arrowDirection: arrowDirection,
-            alignment: alignment,
-            offset: offset
+            arrowDirection: arrowDirection
         ))
+    }
+
+    func withCoachMarks() -> some View {
+        self.overlay {
+            GlobalCoachMarkOverlay()
+        }
     }
 }
 

@@ -16,6 +16,7 @@ struct ProfileView: View {
     @State private var showGraduationPicker = false
     @State private var showAppearancePicker = false
     @State private var selectedStatExplanation: StatType?
+    @State private var showTutorialResetAlert = false
 
     // Settings observation for reminder subtitle updates
     private var settings: SettingsService { SettingsService.shared }
@@ -370,6 +371,11 @@ struct ProfileView: View {
             } message: {
                 Text("This will permanently delete all \(entries.count) learnings. This cannot be undone.")
             }
+            .alert("Tutorial Reset", isPresented: $showTutorialResetAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Feature tips have been reset. You'll see them again as you navigate the app.")
+            }
             .fullScreenCover(isPresented: $showWrapped) {
                 WrappedView(
                     currentMonth: currentMonthData,
@@ -446,14 +452,6 @@ struct ProfileView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
-                .coachMark(
-                    .yourMonth,
-                    title: "Your Month",
-                    message: "View your monthly learning summary with stats and AI insights.",
-                    arrowDirection: .down,
-                    alignment: .top,
-                    offset: CGSize(width: 0, height: -16)
-                )
 
                 // Share Streak button
                 Button(action: { showStreakShare = true }) {
@@ -475,6 +473,12 @@ struct ProfileView: View {
                 .disabled(currentStreak == 0)
                 .opacity(currentStreak == 0 ? 0.5 : 1)
             }
+            .coachMark(
+                .yourMonth,
+                title: "Your Month",
+                message: "View your monthly learning summary with stats and insights.",
+                arrowDirection: .up
+            )
         }
     }
 
@@ -636,11 +640,43 @@ struct ProfileView: View {
                     set: { settings.dailyQuotesEnabled = $0 }
                 ))
                 .labelsHidden()
-                .tint(Color.primaryTextColor)
+                .toggleStyle(MonochromeToggleStyle())
             }
             .padding(16)
             .background(Color.inputBackgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            // Replay Tutorial button
+            Button(action: {
+                CoachMarkService.shared.resetAllMarks()
+                showTutorialResetAlert = true
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.secondaryTextColor)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Replay Tutorial")
+                            .font(.system(.body, design: .serif))
+                            .foregroundStyle(Color.primaryTextColor)
+                        Text("Show feature tips again")
+                            .font(.system(.caption, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+                .padding(16)
+                .background(Color.inputBackgroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
 
             // Clear data button
             Button(action: { showClearDataAlert = true }) {
@@ -670,6 +706,23 @@ struct ProfileView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
+
+            // Legal & Support links
+            HStack(spacing: 24) {
+                Link(destination: URL(string: "https://sameerhimati.github.io/Learnt/privacy.html")!) {
+                    Text("Privacy Policy")
+                        .font(.system(.caption, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+
+                Link(destination: URL(string: "https://sameerhimati.github.io/Learnt/support.html")!) {
+                    Text("Support")
+                        .font(.system(.caption, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -834,51 +887,111 @@ struct GraduationSettingsSheet: View {
 struct AppearanceSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedMode: SettingsService.AppearanceMode = SettingsService.shared.appearanceMode
+    @State private var selectedIcon: SettingsService.AppIcon = SettingsService.shared.currentAppIcon
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Options
-                    VStack(spacing: 0) {
-                        ForEach(SettingsService.AppearanceMode.allCases, id: \.self) { mode in
-                            Button(action: {
-                                selectedMode = mode
-                                SettingsService.shared.appearanceMode = mode
-                            }) {
-                                HStack {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: iconFor(mode))
-                                            .font(.system(size: 18))
-                                            .foregroundStyle(Color.secondaryTextColor)
-                                            .frame(width: 24)
+                    // Theme options
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Theme")
+                            .font(.system(.subheadline, design: .serif, weight: .medium))
+                            .foregroundStyle(Color.secondaryTextColor)
 
-                                        Text(mode.rawValue)
-                                            .font(.system(.body, design: .serif, weight: selectedMode == mode ? .medium : .regular))
-                                            .foregroundStyle(Color.primaryTextColor)
+                        VStack(spacing: 0) {
+                            ForEach(SettingsService.AppearanceMode.allCases, id: \.self) { mode in
+                                Button(action: {
+                                    selectedMode = mode
+                                    SettingsService.shared.appearanceMode = mode
+                                }) {
+                                    HStack {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: iconFor(mode))
+                                                .font(.system(size: 18))
+                                                .foregroundStyle(Color.secondaryTextColor)
+                                                .frame(width: 24)
+
+                                            Text(mode.rawValue)
+                                                .font(.system(.body, design: .serif, weight: selectedMode == mode ? .medium : .regular))
+                                                .foregroundStyle(Color.primaryTextColor)
+                                        }
+
+                                        Spacer()
+
+                                        if selectedMode == mode {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundStyle(Color.primaryTextColor)
+                                        }
                                     }
-
-                                    Spacer()
-
-                                    if selectedMode == mode {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(Color.primaryTextColor)
-                                    }
+                                    .padding(16)
                                 }
-                                .padding(16)
-                            }
-                            .buttonStyle(.plain)
+                                .buttonStyle(.plain)
 
-                            if mode != SettingsService.AppearanceMode.allCases.last {
-                                Divider()
-                                    .background(Color.dividerColor)
-                                    .padding(.leading, 52)
+                                if mode != SettingsService.AppearanceMode.allCases.last {
+                                    Divider()
+                                        .background(Color.dividerColor)
+                                        .padding(.leading, 52)
+                                }
                             }
                         }
+                        .background(Color.inputBackgroundColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .background(Color.inputBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    // App Icon options
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("App Icon")
+                            .font(.system(.subheadline, design: .serif, weight: .medium))
+                            .foregroundStyle(Color.secondaryTextColor)
+
+                        HStack(spacing: 16) {
+                            ForEach(SettingsService.AppIcon.allCases, id: \.self) { icon in
+                                Button(action: {
+                                    selectedIcon = icon
+                                    SettingsService.shared.setAppIcon(icon)
+                                }) {
+                                    VStack(spacing: 8) {
+                                        // Icon preview
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(icon == .light ? Color(hex: "FAFAFA") : Color(hex: "1A1A1A"))
+                                            .frame(width: 60, height: 60)
+                                            .overlay(
+                                                Text("L")
+                                                    .font(.system(size: 28, weight: .medium, design: .serif))
+                                                    .foregroundStyle(icon == .light ? Color(hex: "1A1A1A") : Color(hex: "FAFAFA"))
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 14)
+                                                    .stroke(selectedIcon == icon ? Color.primaryTextColor : Color.clear, lineWidth: 2)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+
+                                        Text(icon.rawValue)
+                                            .font(.system(size: 12, design: .serif))
+                                            .foregroundStyle(Color.primaryTextColor)
+
+                                        if selectedIcon == icon {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.system(size: 16))
+                                                .foregroundStyle(Color.primaryTextColor)
+                                        } else {
+                                            Circle()
+                                                .stroke(Color.secondaryTextColor, lineWidth: 1)
+                                                .frame(width: 16, height: 16)
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+
+                            Spacer()
+                        }
+                        .padding(16)
+                        .background(Color.inputBackgroundColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
                 }
                 .padding(16)
             }
@@ -893,7 +1006,7 @@ struct AppearanceSettingsSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 
     private func iconFor(_ mode: SettingsService.AppearanceMode) -> String {

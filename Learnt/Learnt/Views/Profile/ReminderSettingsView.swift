@@ -30,7 +30,7 @@ struct ReminderSettingsView: View {
                                 .foregroundStyle(Color.secondaryTextColor)
                         }
                     }
-                    .tint(Color.primaryTextColor)
+                    .toggleStyle(MonochromeToggleStyle())
 
                     if captureEnabled {
                         HStack {
@@ -66,7 +66,7 @@ struct ReminderSettingsView: View {
                                 .foregroundStyle(Color.secondaryTextColor)
                         }
                     }
-                    .tint(Color.primaryTextColor)
+                    .toggleStyle(MonochromeToggleStyle())
 
                     if reviewEnabled {
                         HStack {

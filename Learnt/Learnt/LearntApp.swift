@@ -52,6 +52,7 @@ struct LearntApp: App {
                     .transition(.opacity)
                 } else {
                     MainTabView()
+                        .withCoachMarks()
                         .transition(.opacity)
                 }
             }

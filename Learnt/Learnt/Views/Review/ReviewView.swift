@@ -150,9 +150,7 @@ struct ReviewView: View {
                 .reviewDue,
                 title: "Spaced Repetition",
                 message: "Review learnings at optimal intervals to move them into long-term memory.",
-                arrowDirection: .up,
-                alignment: .bottom,
-                offset: CGSize(width: 0, height: 16)
+                arrowDirection: .up
             )
 
             // Start button

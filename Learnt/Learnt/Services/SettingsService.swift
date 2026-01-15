@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import UIKit
 
 @Observable
 final class SettingsService {
@@ -41,6 +42,44 @@ final class SettingsService {
         case system = "System"
         case light = "Light"
         case dark = "Dark"
+    }
+
+    enum AppIcon: String, CaseIterable {
+        case light = "Light"
+        case dark = "Dark"
+
+        var iconName: String? {
+            switch self {
+            case .light: return nil  // Primary icon (no name needed)
+            case .dark: return "AppIconDark"
+            }
+        }
+
+        var previewImageName: String {
+            switch self {
+            case .light: return "icon-1024"
+            case .dark: return "icon-1024-dark"
+            }
+        }
+    }
+
+    var currentAppIcon: AppIcon {
+        get {
+            if let alternateIconName = UIApplication.shared.alternateIconName {
+                return AppIcon.allCases.first { $0.iconName == alternateIconName } ?? .light
+            }
+            return .light
+        }
+    }
+
+    func setAppIcon(_ icon: AppIcon) {
+        guard UIApplication.shared.supportsAlternateIcons else { return }
+
+        UIApplication.shared.setAlternateIconName(icon.iconName) { error in
+            if let error = error {
+                print("Failed to set app icon: \(error.localizedDescription)")
+            }
+        }
     }
 
     var appearanceMode: AppearanceMode {
