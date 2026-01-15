@@ -87,12 +87,27 @@ struct TodayView: View {
                 arrowDirection: .none
             )
 
-            // Floating + button (bottom right) - only when there are entries
-            if !entriesForSelectedDate.isEmpty {
-                VStack {
+            // Floating buttons (bottom)
+            VStack {
+                Spacer()
+                HStack {
+                    // Library button (bottom-left)
+                    Button(action: { showLibrary = true }) {
+                        Image(systemName: "books.vertical")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.primaryTextColor)
+                            .frame(width: 56, height: 56)
+                            .background(Color.appBackgroundColor)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 24)
+
                     Spacer()
-                    HStack {
-                        Spacer()
+
+                    // Add button (bottom-right) - only when there are entries
+                    if !entriesForSelectedDate.isEmpty {
                         Button(action: { showAddLearning = true }) {
                             Image(systemName: "plus")
                                 .font(.system(size: 24, weight: .medium))
@@ -104,9 +119,9 @@ struct TodayView: View {
                         }
                         .buttonStyle(.plain)
                         .padding(.trailing, 24)
-                        .padding(.bottom, 80) // Above tab bar
                     }
                 }
+                .padding(.bottom, 80) // Above tab bar
             }
         }
         .gesture(swipeGesture)
@@ -216,7 +231,7 @@ struct TodayView: View {
 
     private var headerView: some View {
         HStack {
-            // Navigation arrows + date
+            // Navigation arrows + date (tap date to return to today)
             HStack(spacing: 8) {
                 Button(action: { navigateTo(selectedDate.yesterday) }) {
                     Image(systemName: "chevron.left")
@@ -225,9 +240,14 @@ struct TodayView: View {
                 }
                 .buttonStyle(.plain)
 
-                Text(selectedDate.formattedFull)
-                    .font(.system(.title2, design: .serif))
-                    .foregroundStyle(Color.primaryTextColor)
+                // Tap date to return to today
+                Button(action: { navigateTo(Date()) }) {
+                    Text(selectedDate.formattedFull)
+                        .font(.system(.title2, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
+                }
+                .buttonStyle(.plain)
+                .disabled(selectedDate.isToday)
 
                 Button(action: { navigateTo(selectedDate.tomorrow) }) {
                     Image(systemName: "chevron.right")
@@ -240,14 +260,8 @@ struct TodayView: View {
 
             Spacer()
 
+            // Calendar + Share only (Library moved to floating button)
             HStack(spacing: 16) {
-                Button(action: { showLibrary = true }) {
-                    Image(systemName: "books.vertical")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color.primaryTextColor)
-                }
-                .buttonStyle(.plain)
-
                 Button(action: { showCalendar = true }) {
                     Image(systemName: "calendar")
                         .font(.system(size: 20))

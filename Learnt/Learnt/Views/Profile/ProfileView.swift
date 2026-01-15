@@ -291,8 +291,8 @@ struct ProfileView: View {
             return entryMonth == month && entryYear == year
         }
 
+        // Don't generate if no entries - let the UI show the placeholder
         guard !monthEntries.isEmpty else {
-            completion("Keep learning, keep growing")
             return
         }
 
@@ -869,7 +869,7 @@ struct GraduationSettingsSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.large])
     }
 
     private func descriptionFor(_ count: Int) -> String {

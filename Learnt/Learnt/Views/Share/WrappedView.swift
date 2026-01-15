@@ -147,6 +147,13 @@ struct WrappedView: View {
     private func loadOrGenerateSummary() {
         let monthKey = settings.monthKey(from: currentMonth.monthDate)
 
+        // Don't load or generate if insufficient learnings
+        guard canGenerateAISummary else {
+            // Clear any invalid stored summary
+            currentSummary = nil
+            return
+        }
+
         // For current month, always regenerate to reflect latest learnings
         // (Summary will be locked when the month ends)
 
@@ -159,19 +166,19 @@ struct WrappedView: View {
             return
         }
 
-        // Check if passed in data has summary
+        // Check if passed in data has summary and we have enough learnings
         if currentMonth.aiSummary != nil {
-            return
-        }
-
-        // Don't generate if insufficient learnings
-        guard canGenerateAISummary else {
             return
         }
 
         // Generate new summary
         isLoadingSummary = true
         onGenerateSummary(currentMonth.monthDate) { summary in
+            // Only store if we actually got a summary (not empty)
+            guard !summary.isEmpty else {
+                isLoadingSummary = false
+                return
+            }
             // Store it with learning count so we know when to regenerate
             settings.setAISummary(summary, for: monthKey)
             settings.setAISummaryLearningCount(currentMonth.totalLearnings, for: monthKey)
@@ -482,20 +489,26 @@ struct PastMonthDetailView: View {
     private func loadOrGenerateSummary() {
         let monthKey = settings.monthKey(from: data.monthDate)
 
+        // Don't load or generate if no learnings
+        guard canGenerateAISummary else {
+            summary = nil
+            return
+        }
+
         // Past months are locked - use stored summary if exists
         if let stored = settings.getAISummary(for: monthKey) {
             summary = stored
             return
         }
 
-        // Don't generate if no learnings
-        guard canGenerateAISummary else {
-            return
-        }
-
         // Generate new summary for past month (will be locked permanently)
         isLoading = true
         onGenerateSummary(data.monthDate) { newSummary in
+            // Only store if we actually got a summary (not empty)
+            guard !newSummary.isEmpty else {
+                isLoading = false
+                return
+            }
             // Store it permanently (past months are locked)
             settings.setAISummary(newSummary, for: monthKey)
             summary = newSummary
