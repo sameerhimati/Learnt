@@ -414,9 +414,9 @@ private class RecordingPlaybackManager: NSObject, ObservableObject, AVAudioPlaye
 struct MonochromeToggleStyle: ToggleStyle {
     @Environment(\.colorScheme) private var colorScheme
 
-    private var trackOffColor: Color {
+    private func trackOffColor(_ scheme: ColorScheme) -> Color {
         // More visible off state in dark mode
-        colorScheme == .dark ? Color.secondaryTextColor.opacity(0.4) : Color.dividerColor
+        scheme == .dark ? Color.secondaryTextColor.opacity(0.4) : Color.dividerColor
     }
 
     func makeBody(configuration: Configuration) -> some View {
@@ -425,30 +425,32 @@ struct MonochromeToggleStyle: ToggleStyle {
 
             Spacer()
 
-            ZStack {
-                // Track with animated color
-                Capsule()
-                    .fill(configuration.isOn ? Color.primaryTextColor : trackOffColor)
-                    .frame(width: 51, height: 31)
-
-                // Thumb with border for contrast
-                Circle()
-                    .fill(Color.appBackgroundColor)
-                    .overlay(
-                        Circle()
-                            .stroke(configuration.isOn ? Color.primaryTextColor : Color.secondaryTextColor.opacity(0.5), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
-                    .frame(width: 27, height: 27)
-                    .offset(x: configuration.isOn ? 10 : -10)
-            }
-            .animation(.easeInOut(duration: 0.2), value: configuration.isOn)
-            .onTapGesture {
-                withAnimation(.easeInOut(duration: 0.2)) {
+            Button {
+                withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
                     configuration.isOn.toggle()
                 }
+            } label: {
+                ZStack {
+                    // Track
+                    Capsule()
+                        .fill(configuration.isOn ? Color.primaryTextColor : trackOffColor(colorScheme))
+                        .frame(width: 51, height: 31)
+
+                    // Thumb
+                    Circle()
+                        .fill(Color.appBackgroundColor)
+                        .overlay(
+                            Circle()
+                                .stroke(configuration.isOn ? Color.primaryTextColor : Color.secondaryTextColor.opacity(0.5), lineWidth: 0.5)
+                        )
+                        .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
+                        .frame(width: 27, height: 27)
+                        .offset(x: configuration.isOn ? 10 : -10)
+                }
             }
+            .buttonStyle(.plain)
         }
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isOn)
     }
 }
 
