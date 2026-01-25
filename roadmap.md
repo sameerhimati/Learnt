@@ -1,262 +1,322 @@
 # Learnt Roadmap
 
-## Timeline
+## Current Status
 
-- **v1 (MVP):** January 4-18 (2 weeks) → TestFlight to friends/family ✅
-- **v2 (Enhanced):** January 19-31 → Broader TestFlight ✅
-- **v2.5 (Pre-Launch Polish):** January → Sharing, Favorites, Streaks ✅
-- **v3 (AI & Launch):** February → On-device AI + App Store submission
-- **Launch:** Mid-February → App Store
+**TestFlight Live** - 12 testers
+**Development Resumed** - January 25, 2026
 
 ---
 
-## v1 - MVP ✅ COMPLETE
+## Vision
 
-**Goal:** Core loop works. You can use it daily.
+**From:** Daily learning journal (text/voice entries)
+**To:** Personal knowledge bank with zero-friction capture and active recall
 
-### Must Have (Ship Blockers)
-- [x] Today screen with date display
-- [x] Add entry via text input
-- [x] Add entry via voice input (Speech framework)
-- [x] View today's entry
-- [x] Swipe between days (back in time only from today)
-- [x] Activity dots showing current week
-- [x] Local persistence (SwiftData)
-- [x] Multiple entries per day support
-- [x] Edit existing entry
-- [x] Dark mode support
-- [x] Bottom tab bar (3 tabs)
-- [x] Basic Insights tab (list of all entries)
-- [x] Basic Profile tab (entry count, streak)
-
-### Nice to Have
-- [x] Calendar overlay (pull down)
-- [x] Tap dots to navigate
-- [x] Haptic feedback
-- [x] Keyboard avoidance polish
-- [ ] App icon (using placeholder)
+**Core Differentiators:**
+- Mobile-first (not a web app ported to mobile)
+- Zero-friction capture (share sheet, quick entry)
+- Forces reflection moment ("what did you learn from this?")
+- Active recall prompts (spaced repetition that actually works)
+- AI-powered categorization and insights
 
 ---
 
-## v2 - Enhanced ✅ COMPLETE
+## Completed Versions
 
-**Goal:** Polish for real users. Richer insights.
+### v1 - MVP ✅
 
-### Features
-- [x] Categories (4 preset: Personal, Work, Learning, Relationships)
-  - [x] Category selector on entry creation
-  - [x] Category icon on entry cards
-  - [x] Category filtering in Insights
-- [x] Guided reflection prompts (Application, Surprise, Simplification, Question)
-- [x] Spaced repetition review system
-- [x] Notification reminders (configurable capture + review times)
-- [x] Calendar overlay with full month view
-- [x] Entry search
-- [x] Proper onboarding (3 screens max)
-- [x] Settings screen
-  - [x] Notification time
-  - [x] Theme toggle (system default)
-- [x] Haptic feedback throughout
-- [x] Smooth animations (300ms transitions)
-- [x] Empty state illustrations
-- [x] Custom tab bar design
+Core capture and review loop.
 
-### Deferred to Post-Launch
-- [ ] iCloud sync (CloudKit)
+- Today screen with date display and navigation
+- Text and voice input with transcription
+- Swipe between days (back in time only)
+- Activity dots showing current week
+- Multiple entries per day
+- Edit existing entries
+- Dark mode support
+- 3-tab navigation (Insights | Today | You)
+- Calendar overlay (pull down)
+- Local persistence (SwiftData)
+- Haptic feedback
+
+### v2 - Enhanced ✅
+
+Polish for real users.
+
+- Categories (4 preset: Personal, Work, Learning, Relationships)
+- Guided reflection prompts
+- Spaced repetition review system
+- Notification reminders (capture + review times)
+- Full calendar with month view
+- Entry search
+- 3-screen onboarding
+- Settings (notifications, theme, appearance)
+- Custom tab bar design
+- Empty states
+
+### v2.5 - Pre-Launch Polish ✅
+
+Sharing and engagement.
+
+- ShareImageService (SwiftUI → UIImage at 1080x1920)
+- LearningShareCard (single entry template)
+- StreakShareCard (milestone template)
+- Image/Text toggle on all share sheets
+- Monthly Wrapped ("Your Month" view)
+  - Stats (learnings, days, streak)
+  - Top categories
+  - Past months browser
+- Streak system with milestones (3, 7, 14, 30, 60, 90, 180, 365)
+- Streak celebration modal
+- Favorites/bookmarks with heart toggle
+- Voice transcription (optional, editable)
+
+### v3.1 - Review System Overhaul ✅
+
+Science-backed spaced repetition.
+
+- Intervals: 1 → 7 → 16 → 30 → 45 → 60 days (Huberman Lab research)
+- Auto-graduation after N reviews (configurable 3-6, default 4)
+- Simplified flow: show learning → "Still with you?" → Got it / Review again
+- Progress ring visualization
+- Status messages ("3 learnings ready to reinforce")
+- Graduation threshold setting
+
+### v3.2 - TestFlight Ready ✅
+
+Final polish for external testing.
+
+- Portrait-only mode
+- Splash screen ("L" → "Learnt" animation, 4.5s)
+- App icons (light, dark, tinted variants)
+- Coach marks system for first-time users
+- Library modal (search, filter by All/Favorites/Graduated/Category)
+- Bold Spotify Wrapped-style share cards
+- Dark mode border on share cards
+
+### v3.3 - AI Foundation ✅
+
+On-device AI infrastructure (ready for iOS 26).
+
+- AIService using Apple Foundation Models
+- Category auto-suggestion (iOS 26+)
+- Reflection prompt generation (iOS 26+)
+- Monthly AI summaries for Wrapped (iOS 26+)
+- Graceful fallback for iOS 18-25
+- Mock implementations for testing
+
+---
+
+## What's Built
+
+### 49 Swift Files
+
+**Models (2)**
+- LearningEntry (content, reflections, spaced repetition, categories, audio, favorites, graduation)
+- Category (name, icon, preset flag)
+
+**Services (11)**
+- AIService - On-device AI via Foundation Models
+- CategoryService - Category CRUD and presets
+- CoachMarkService - First-time user guidance
+- EntryStore - SwiftData operations
+- MockDataService - Test data generation
+- NotificationService - Capture/review reminders
+- QuoteService - Daily inspirational quotes
+- SettingsService - UserDefaults wrapper
+- ShareImageService - SwiftUI → UIImage rendering
+- StreakService - Milestone tracking
+- VoiceRecorderService - Audio recording/playback
+
+**Views (35)**
+- Today: TodayView, LearningCard, WeekActivityRow, AddButton, QuoteCard, EmptyStateView
+- Input: AddLearningView, VoiceRecordingView, CategoryPicker, AddCategoryView
+- Review: ReviewView, ReviewSessionView
+- Calendar: CalendarOverlay
+- Library: LibraryView
+- Profile: ProfileView, ReminderSettingsView
+- Share: WrappedView, ShareEntrySheet, ShareSheetView, ShareableCardView, LearningShareCard, StreakShareCard, StreakShareSheet
+- Celebration: StreakCelebrationView
+- Onboarding: OnboardingView
+- Launch: SplashView
+- Components: CustomTabBar, CoachMarkView, AudioPlaybackButton
+- Main: LearntApp, MainTabView
+
+**Utilities (2)**
+- Date+Extensions
+- Color+Theme
+
+### Data Model
+
+```swift
+LearningEntry {
+    id, content, date, createdAt, updatedAt, sortOrder
+    application, surprise, simplification, question  // Reflections
+    nextReviewDate, reviewInterval, reviewCount      // Spaced repetition
+    categories: [Category]                           // Many-to-many
+    contentAudioFileName, transcription              // Voice
+    isFavorite, isGraduated                          // Status
+}
+```
+
+### Features Summary
+
+| Feature | Status |
+|---------|--------|
+| Text entry | ✅ |
+| Voice entry with transcription | ✅ |
+| Multiple entries per day | ✅ |
+| Categories (4 preset) | ✅ |
+| Reflection prompts | ✅ |
+| Spaced repetition (35-day cap, see v2) | ⏳ Updating |
+| Auto-graduation | ✅ |
+| Favorites | ✅ |
+| Search | ✅ |
+| Calendar navigation | ✅ |
+| Notifications | ✅ |
+| Streaks + milestones | ✅ |
+| Monthly Wrapped | ✅ |
+| Share cards (entry, streak, wrapped) | ✅ |
+| AI summaries | ✅ (iOS 26+) |
+| Dark mode | ✅ |
+| Onboarding | ✅ |
+| Coach marks | ✅ |
+| App icons (light/dark/tinted) | ✅ |
+
+---
+
+## Future Versions
+
+### TestFlight v2 - Bug Fixes & Core Improvements
+
+**Goal:** Address user feedback, improve core experience. Cost: $0
+
+**Bugs (from TestFlight feedback)**
+- [ ] Fix splash animation (smooth the "L" → "Learnt" transition, currently choppy)
+- [ ] Reset to today on app launch (currently stays on last viewed day)
+- [ ] Fix edit button overlap with + button (3+ entries)
+- [ ] Rethink date/navigation UX (arrows + date more prominent, swipe not intuitive)
+- [ ] Fix AI summary or graceful fallback for iOS <26 (shows "keep learning, keep growing")
+
+**Capture Friction**
+- [ ] Share sheet extension (share links/text from anywhere → creates new learning)
+
+**Spaced Repetition Overhaul**
+- [ ] Timer starts on first reflection, not entry creation
+- [ ] Cap all intervals at 35 days max
+- [ ] Adjust intervals for graduation threshold:
+  - 3 reviews: 7 → 21 → 35 days
+  - 4 reviews: 7 → 14 → 28 → 35 days
+  - 5 reviews: 5 → 12 → 21 → 28 → 35 days
+  - 6 reviews: 4 → 9 → 16 → 23 → 30 → 35 days
+
+**Library & Organization**
+- [ ] Filter by category/date
+- [ ] Bulk review functionality
+- [ ] Bulk summarize functionality
+
+**Polish**
+- [ ] Keep quotes from previous days (persist, not just today)
+- [ ] Review by label / re-review graduated learnings
+
+---
+
+### TestFlight v3 / App Store Launch
+
+**Goal:** Cloud infrastructure and public release. Cost: ~$0-20/month
+
+**Infrastructure**
+- [ ] User authentication (Firebase Auth or Supabase - free tier)
+- [ ] Cloud sync (CloudKit for iOS-only, or Supabase for future flexibility)
+- [ ] Offline-first with sync when connected
+- [ ] Data migration path from local-only to cloud
+
+**Media Support**
+- [ ] Photo attachments on learnings
+- [ ] Image storage (Firebase Storage / S3 / CloudKit)
+
+**App Store Requirements**
+- [ ] Privacy policy URL (host on itamih.com)
+- [ ] Support URL
+- [ ] App Store screenshots (6.5" and 5.5")
+- [ ] App Store description and keywords
+- [ ] App review notes
+- [ ] Category selection (Lifestyle or Productivity)
+
+---
+
+### Post-Launch
+
+**Goal:** AI-powered knowledge bank. Cost: ~$0.10-0.30/user/month
+
+**Media Interpretation**
+- [ ] AI vision to understand photos (Claude/GPT-4o Vision API)
+- [ ] OCR for handwritten notes, whiteboards
+- [ ] Smart extraction from screenshots
+
+**Advanced Review**
+- [ ] Quizzing functionality (not just "still with you?")
+- [ ] AI-generated questions based on learning content
+- [ ] Spaced repetition for image-based learnings
+
+**Premium Features**
+- [ ] StoreKit subscription implementation
+- [ ] Paywall UI
+- [ ] Custom categories beyond 4 presets
+- [ ] Widgets (home screen, lock screen)
 - [ ] Export to JSON/CSV
 
 ---
 
-## v2.5 - Pre-Launch Polish ✅ COMPLETE
+### Future Vision (Later)
 
-**Goal:** Shareable templates, engagement features, transcription polish.
-
-### Shareable Visual Templates
-- [x] ShareImageService (SwiftUI → UIImage rendering)
-- [x] ShareableCardView base component (monochrome design)
-- [x] LearningShareCard (single entry template)
-- [x] StreakShareCard (milestone template)
-- [x] ShareEntrySheet (share individual entries)
-- [x] StreakShareSheet (share streak from profile)
-
-### Monthly Wrapped (Spotify-style)
-- [x] WrappedView with 5 swipeable cards
-  - Intro with period name
-  - Total learnings + days active
-  - Top categories breakdown
-  - Streak stats (current + longest)
-  - Summary with share option
-- [x] "Your Month" button in Profile
-
-### Streak System
-- [x] StreakService with milestone logic
-- [x] Milestones: 3, 7, 14, 30, 60, 90, 180, 365 days
-- [x] StreakCelebrationView modal
-- [x] Celebration messages per milestone
-
-### Favorites/Bookmarks
-- [x] isFavorite field on LearningEntry
-- [x] Heart toggle on expanded cards
-- [x] Favorite indicator on card preview
-
-### Voice Transcription
-- [x] Optional transcription toggle after recording
-- [x] Editable transcription text field
-- [x] Transcription stored with entry
-
----
-
-## v3.1 - Review System Overhaul ✅ COMPLETE
-
-**Goal:** Science-backed spaced repetition. Library for browsing learnings.
-
-### Review System Redesign
-- [x] Science-backed intervals (1 → 7 → 16 → 35 days)
-  - Based on Huberman Lab forgetting curve research
-  - Optimal spacing for long-term retention
-- [x] Auto-graduation after N reviews (default 4, configurable 3-6)
-- [x] Simplified review flow: show learning → "Still with you?" → Got it / Review again
-  - Removed quiz phase (no "What do you remember?" prompt)
-  - Learnings as gentle reminders, not memorization tests
-- [x] 2-button outcome: "Got it" (advance interval) / "Review again" (reset to 1 day)
-- [x] Progress ring visualization in Review tab
-- [x] Status messages ("3 learnings ready to reinforce", "Next review in 2 days")
-- [x] Science note explaining the interval system
-- [x] Graduation threshold setting in Profile
-
-### Library Feature
-- [x] Library modal accessible from Today header and Profile
-- [x] Search learnings by content
-- [x] Filter by All / Favorites / Graduated
-- [x] Category filtering with counts
-- [x] Entry detail view with reflections and review progress
-- [x] Proper toolbar title formatting
-
----
-
-## v3.2 - TestFlight Ready ✅ COMPLETE
-
-**Goal:** Final polish for TestFlight submission.
-
-### App Polish
-- [x] Portrait-only mode (no landscape)
-- [x] Splash screen with "Learnt" branding
-- [x] 3-screen onboarding flow (Welcome, How It Works, Get Started)
-- [x] Bold Spotify Wrapped-style share cards (1080x1920)
-- [x] Share button in Library entries
-- [x] Image/Text toggle for all share sheets
-- [x] Dark mode border on share cards
-
-### TestFlight Checklist
-- [ ] App icon (1024x1024, light/dark/tinted variants)
-- [ ] Privacy policy URL
-- [ ] Support URL
-- [ ] App Store Connect setup
-- [ ] Archive and upload
-
----
-
-## v4 - Review Types (Planned)
-
-**Goal:** Two types of learnings with different review experiences.
-
-### Learning Types
-- [ ] "Quiz me" type - Active recall with text input
-  - "What do you remember about..." prompt
-  - User types recall attempt
-  - Reveal and compare
-  - Best for: Facts, concepts, techniques
-- [ ] "Remind me" type - Just show the learning
-  - Display learning immediately
-  - "Still with you?" prompt
-  - Best for: Quotes, wisdom, principles
-- [ ] Type selector when creating entry
-- [ ] Default to "Remind me" for most content
-
----
-
-## v5 - AI-Contextual Reviews (Planned)
-
-**Goal:** AI generates appropriate review experiences based on content.
-
-### Intelligent Review Prompts
-- [ ] AI analyzes learning content type
-- [ ] Facts → Quiz questions ("What % boost do walking meetings give?")
-- [ ] Wisdom → Reflection prompts ("How have you applied this recently?")
-- [ ] Concepts → Explanation requests ("Explain spaced repetition in your own words")
-- [ ] Uses Apple Intelligence (on-device, zero API cost)
-- [ ] Graceful fallback for non-AI devices
-
----
-
-## v6 - AI & Launch (Future)
-
-**Goal:** Ship to App Store. On-device AI makes it magical.
-
-### On-Device AI Features (Apple Intelligence - Zero API Cost)
-- [ ] AI reflection question generation
-  - Contextual prompts based on entry content
-  - Uses Apple Foundation Models
-- [ ] AI auto-categorization
-  - Suggest category based on content
-  - User confirms or changes
-- [ ] AI monthly summaries for Wrapped
-  - Theme detection
-  - Pattern insights
-  - Standout entries
-- [ ] Graceful fallback if device doesn't support AI
-
-### Premium Features (One-Time Purchase $4.99-9.99)
-- [ ] Unlock shareable templates (entry, streak, wrapped)
-- [ ] Advanced insights/analytics
-- [ ] Custom categories beyond 4 presets
-- [ ] Widgets
-
-### Launch Checklist
-- [ ] App Store screenshots (6.5" and 5.5")
-- [ ] App Store description
-- [ ] Privacy policy (host on itamih.com)
-- [ ] Support URL
-- [ ] App review notes
-- [ ] Keywords research
-- [ ] Category selection (Lifestyle or Productivity)
-- [ ] Final app icon design
-- [ ] StoreKit IAP implementation
-
----
-
-## Feature Ideas (Backlog)
-
-Parking lot for future consideration:
-
-- "Talk to your learnings" chat interface
-- Widget for home screen
+- "Talk to your learnings" chat interface (RAG)
+- Personal SLM trained on user's knowledge
 - iPad support
 - Mac Catalyst
 - Apple Watch quick entry
 - Siri shortcuts ("Hey Siri, I learned...")
-- Multiple journals (personal, work)
-- Entry templates
-- Attachments (photos of notes)
-- Integration with Apple Notes
-- Streak recovery (premium)
-- Entry prompts when stuck
-- iCloud sync
-- Export to JSON/CSV
 
 ---
 
-## Technical Debt to Address
+## Cost Projections
 
-Track items to fix but not block shipping:
+| Stage | Infrastructure | AI Costs | Total/month |
+|-------|---------------|----------|-------------|
+| TestFlight v2 | $0 | $0 (on-device) | $0 |
+| App Store Launch | ~$5-20 | $0 | ~$5-20 |
+| Post-Launch (1k users) | ~$20 | ~$50-100 | ~$70-120 |
+| Scale (10k users) | ~$100 | ~$300-500 | ~$400-600 |
 
-- [ ] (Add as discovered)
+---
+
+## Technical Notes
+
+### iOS Version Support
+
+| iOS Version | AI Features |
+|-------------|-------------|
+| 18-25 | Core app works, AI summaries disabled |
+| 26+ | Full AI via Foundation Models (on-device) |
+
+No API keys required. AI runs locally on A17 Pro / M1+ devices.
+
+### Known Issues (from TestFlight)
+
+**Bugs:**
+1. Splash animation choppy
+2. App doesn't reset to today on launch
+3. Edit button hidden by + button (3+ entries)
+4. AI summary not generating (iOS 26 only)
+
+**UX Issues:**
+- Date tap → today not discoverable
+- Swipe navigation not intuitive
+- Calendar/share icons could move to make room for date + arrows
 
 ---
 
 ## Decisions Log
-
-Record key decisions and rationale:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
@@ -264,46 +324,45 @@ Record key decisions and rationale:
 | Jan 4 | SwiftData over Core Data | Modern, less boilerplate |
 | Jan 4 | New York serif font | Native iOS, no font loading |
 | Jan 4 | Multiple entries per day | Flexibility over constraint |
-| Jan 4 | Categories in v2 | Organization with minimal friction (4 preset categories) |
+| Jan 4 | Categories in v2 | Organization with minimal friction |
 | Jan 4 | Voice in v1 | Essential to vision |
-| Jan 4 | Local-first | Ship faster, add sync in v2 |
+| Jan 4 | Local-first | Ship faster, add sync later |
 | Jan 9 | On-device AI via Apple Intelligence | Zero API cost, privacy-friendly |
 | Jan 9 | Shareables as premium unlock | AI is free (on-device), templates are value |
 | Jan 9 | No auth/accounts | StoreKit handles purchases, zero backend |
-| Jan 9 | Affiliate marketing over paid ads | Better ROI for self-help apps |
 | Jan 9 | Monochrome share templates | Match app aesthetic, stand out on social |
 | Jan 9 | Optional voice transcription | User choice, editable after generation |
-| Jan 14 | Simplified review (no quiz phase) | Goal is spaced exposure, not memorization testing |
-| Jan 14 | Science-backed intervals (1,7,16,35) | Huberman Lab forgetting curve research |
+| Jan 14 | Simplified review (no quiz phase) | Goal is spaced exposure, not memorization |
+| Jan 14 | Science-backed intervals | Huberman Lab forgetting curve research |
 | Jan 14 | Auto-graduation after 4 reviews | Prevents infinite review loops |
-| Jan 14 | Portrait-only, iPhone-only | Focus on core experience, no landscape distractions |
-| Jan 14 | Spotify Wrapped-style share cards | Design at 1080x1920, preview scaled down for crisp exports |
-| Jan 14 | 3-screen onboarding | Minimal introduction, request notifications on final screen |
+| Jan 14 | Portrait-only, iPhone-only | Focus on core experience |
+| Jan 14 | Spotify Wrapped-style cards | 1080x1920, preview scaled for crisp exports |
+| Jan 14 | 3-screen onboarding | Minimal introduction |
+| Jan 16 | Development pause | TestFlight live, gathering feedback |
+| Jan 25 | Vision pivot | From journal → personal knowledge bank with active recall |
+| Jan 25 | Spaced rep overhaul | Timer from first reflection, 35-day cap, higher frequency |
+| Jan 25 | 3-month free trial | Hook users before conversion, subscription model |
+| Jan 25 | Share sheet priority | Zero-friction capture is core to new vision |
+| Jan 25 | Cloud sync in v3 | Required for cross-device and future AI features |
 
 ---
 
 ## Marketing Strategy
 
 ### Launch Approach
-- **Free at launch** with all core features
-- Build user base, gather feedback
-- Add premium unlock after establishing traction
+- 3-month free trial with all features
+- Users build habit and data moat
+- Convert to subscription after trial
 
 ### Marketing Channels
-- **Influencer/Affiliate Marketing** (Primary)
-  - Target: Self-improvement, productivity, journaling creators
-  - Platforms: TikTok, Instagram, YouTube
-  - Offer: Revenue share or flat fee per install
-- **Organic Content**
-  - Share templates designed for social virality
-  - User-generated content from shareable cards
-- **App Store Optimization**
-  - Keywords: learning journal, daily reflection, voice journal
+- **Influencer/Affiliate** (Primary) - Self-improvement creators
+- **Organic** - Shareable cards designed for social virality
+- **ASO** - Keywords: learning journal, knowledge bank, daily reflection, voice journal, active recall
 
 ### Monetization
-- **Free Tier:** All core features (capture, review, streaks, AI)
-- **Premium ($4.99-9.99 one-time):**
-  - Visual share templates (entry, streak, wrapped)
-  - Advanced analytics
-  - Custom categories
-  - Widgets
+- **Trial (3 months):** All features free
+- **Subscription (TBD pricing):** Required after trial for continued access
+- **Open questions:**
+  - What happens after trial? Read-only or locked?
+  - Monthly vs yearly pricing?
+  - Family sharing?
