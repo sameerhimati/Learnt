@@ -266,8 +266,15 @@ struct WrappedView: View {
                         .font(.system(.body, design: .serif))
                         .foregroundStyle(Color.secondaryTextColor)
                         .multilineTextAlignment(.center)
+                } else if !AIService.shared.isAvailable {
+                    // AI not available on this device/iOS version
+                    Text("AI insights require iOS 26+")
+                        .font(.system(.body, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+                        .multilineTextAlignment(.center)
                 } else {
-                    Text("Keep learning, keep growing")
+                    // Fallback - should rarely appear
+                    Text("Your month in reflection")
                         .font(.system(.body, design: .serif))
                         .foregroundStyle(Color.secondaryTextColor)
                         .italic()
@@ -456,8 +463,13 @@ struct PastMonthDetailView: View {
                         .foregroundStyle(Color.primaryTextColor)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
+                } else if !AIService.shared.isAvailable {
+                    Text("AI insights require iOS 26+")
+                        .font(.system(.body, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+                        .multilineTextAlignment(.center)
                 } else {
-                    Text("Keep learning, keep growing")
+                    Text("Your month in reflection")
                         .font(.system(.body, design: .serif))
                         .foregroundStyle(Color.secondaryTextColor)
                         .italic()
@@ -751,7 +763,7 @@ struct WrappedSharePreview: View {
                             .lineSpacing(8)
                             .fixedSize(horizontal: false, vertical: true)
                     } else {
-                        Text("Keep learning, keep growing")
+                        Text("Your month in reflection")
                             .font(.system(size: 36, weight: .regular, design: .serif))
                             .foregroundColor(secondaryColor)
                             .italic()

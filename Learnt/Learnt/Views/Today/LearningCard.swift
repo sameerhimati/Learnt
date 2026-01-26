@@ -12,6 +12,7 @@ struct LearningCard: View {
     let onDelete: () -> Void
     let onShare: () -> Void
     let onToggleFavorite: () -> Void
+    var onExpansionChanged: ((Bool) -> Void)? = nil
 
     @State private var isExpanded = false
 
@@ -33,6 +34,7 @@ struct LearningCard: View {
         .onTapGesture {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 isExpanded.toggle()
+                onExpansionChanged?(isExpanded)
             }
         }
     }

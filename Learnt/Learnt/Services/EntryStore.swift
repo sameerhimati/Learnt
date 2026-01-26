@@ -106,6 +106,16 @@ final class EntryStore {
         entry.surprise = surprise
         entry.simplification = simplification
         entry.question = question
+
+        // Start the spaced repetition timer on first reflection
+        let hasNewReflections = application != nil || surprise != nil || simplification != nil || question != nil
+        if entry.firstReflectionDate == nil && hasNewReflections {
+            entry.firstReflectionDate = Date()
+            // Schedule first review for tomorrow
+            entry.nextReviewDate = Calendar.current.date(byAdding: .day, value: 1, to: Date())
+            entry.reviewInterval = 1
+        }
+
         entry.updatedAt = Date()
         save()
     }
@@ -150,26 +160,34 @@ final class EntryStore {
     }
 
     /// Record a review result and update spaced repetition schedule
-    /// Science-backed intervals: 1 → 7 → 16 → 35 days (based on Huberman Lab research)
+    /// Intervals are threshold-based and capped at 35 days max
     /// - Parameters:
     ///   - entry: The entry being reviewed
     ///   - result: Whether user recalled it (.gotIt) or needs another review (.reviewAgain)
     func recordReview(_ entry: LearningEntry, result: ReviewResult) {
         let calendar = Calendar.current
+        let threshold = SettingsService.shared.graduationThreshold
 
         switch result {
         case .gotIt:
             entry.reviewCount += 1
 
             // Check for graduation
-            let threshold = SettingsService.shared.graduationThreshold
             if entry.reviewCount >= threshold {
                 entry.isGraduated = true
                 entry.nextReviewDate = nil  // No more reviews needed
             } else {
-                // Science-backed intervals: 1, 7, 16, 30, 45, 60 days
-                let intervals = [1, 7, 16, 30, 45, 60]
-                let nextInterval = intervals[min(entry.reviewCount, intervals.count - 1)]
+                // Threshold-based intervals, all capped at 35 days
+                let intervals: [Int]
+                switch threshold {
+                case 3:  intervals = [7, 21, 35]
+                case 4:  intervals = [7, 14, 28, 35]
+                case 5:  intervals = [5, 12, 21, 28, 35]
+                case 6:  intervals = [4, 9, 16, 23, 30, 35]
+                default: intervals = [7, 14, 28, 35]
+                }
+
+                let nextInterval = intervals[min(entry.reviewCount - 1, intervals.count - 1)]
                 entry.reviewInterval = nextInterval
                 entry.nextReviewDate = calendar.date(byAdding: .day, value: nextInterval, to: Date())
             }

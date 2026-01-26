@@ -27,6 +27,7 @@ final class SettingsService {
         static let lastWrappedPromptMonth = "lastWrappedPromptMonth"
         static let appearanceMode = "appearanceMode"
         static let dailyQuotesEnabled = "dailyQuotesEnabled"
+        static let lastActiveTime = "lastActiveTime"
     }
 
     // MARK: - Onboarding
@@ -109,6 +110,23 @@ final class SettingsService {
         set {
             UserDefaults.standard.set(newValue, forKey: Keys.dailyQuotesEnabled)
         }
+    }
+
+    // MARK: - App Activity Tracking
+
+    /// Last time the app was active (for reset-to-today logic)
+    var lastActiveTime: Date? {
+        get { UserDefaults.standard.object(forKey: Keys.lastActiveTime) as? Date }
+        set { UserDefaults.standard.set(newValue, forKey: Keys.lastActiveTime) }
+    }
+
+    /// Check if app has been inactive for more than 1 hour
+    var shouldResetToToday: Bool {
+        guard let lastActive = lastActiveTime else {
+            return true  // First launch or no previous activity
+        }
+        let hourAgo = Calendar.current.date(byAdding: .hour, value: -1, to: Date()) ?? Date()
+        return lastActive < hourAgo
     }
 
     // MARK: - Capture Reminder

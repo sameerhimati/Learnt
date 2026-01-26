@@ -8,6 +8,7 @@ import SwiftData
 
 struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var allEntries: [LearningEntry]
 
     // Use SceneStorage to persist selected date across tab switches
@@ -30,6 +31,7 @@ struct TodayView: View {
     @State private var entryToShare: LearningEntry?
     @State private var showLibrary = false
     @State private var dailyQuotesEnabled = SettingsService.shared.dailyQuotesEnabled
+    @State private var expandedCardId: UUID? = nil
 
     private let quoteService = QuoteService.shared
     private var settings: SettingsService { SettingsService.shared }
@@ -115,8 +117,8 @@ struct TodayView: View {
 
                     Spacer()
 
-                    // Add button (bottom-right) - only when there are entries
-                    if !entriesForSelectedDate.isEmpty {
+                    // Add button (bottom-right) - only when there are entries and no card is expanded
+                    if !entriesForSelectedDate.isEmpty && expandedCardId == nil {
                         Button(action: { showAddLearning = true }) {
                             Image(systemName: "plus")
                                 .font(.system(size: 24, weight: .medium))
@@ -234,6 +236,18 @@ struct TodayView: View {
             dailyQuotesEnabled = SettingsService.shared.dailyQuotesEnabled
             isQuoteHidden = quoteService.isQuoteHidden
         }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .active {
+                // Reset to today if app has been inactive for 1+ hour or on cold launch
+                if settings.shouldResetToToday {
+                    setSelectedDate(Date().startOfDay)
+                }
+            }
+            if newPhase == .background {
+                // Track when app goes to background
+                settings.lastActiveTime = Date()
+            }
+        }
     }
 
     // MARK: - Header
@@ -267,6 +281,20 @@ struct TodayView: View {
             }
 
             Spacer()
+
+            // "Today" button when viewing a past date
+            if !selectedDate.isToday {
+                Button(action: { navigateTo(Date()) }) {
+                    Text("Today")
+                        .font(.system(size: 13, weight: .medium, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.inputBackgroundColor)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
 
             // Calendar + Share only (Library moved to floating button)
             HStack(spacing: 16) {
@@ -323,6 +351,9 @@ struct TodayView: View {
                         onToggleFavorite: {
                             entry.isFavorite.toggle()
                             entry.updatedAt = Date()
+                        },
+                        onExpansionChanged: { isExpanded in
+                            expandedCardId = isExpanded ? entry.id : nil
                         }
                     )
                     .modifier(FirstCardCoachMark(isFirstCard: index == 0))

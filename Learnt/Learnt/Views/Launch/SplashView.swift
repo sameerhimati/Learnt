@@ -16,8 +16,8 @@ struct SplashView: View {
     // Phase 2: L shifts left & shrinks, "earnt" letters fade in
     // Phase 3: Tagline fades in
 
-    // Smooth spring animation for the main transition
-    private let smoothSpring = Animation.spring(response: 0.9, dampingFraction: 0.85)
+    // Unified smooth spring for all transitions
+    private let smoothSpring = Animation.spring(response: 0.7, dampingFraction: 0.85)
 
     var body: some View {
         ZStack {
@@ -34,15 +34,14 @@ struct SplashView: View {
                         .scaleEffect(phase >= 2 ? 1.0 : 1.25)
                         .opacity(phase >= 1 ? 1 : 0)
 
-                    // Each letter with staggered timing
+                    // Each letter with subtle staggered timing
                     letterView("e", delay: 0.0)
-                    letterView("a", delay: 0.08)
-                    letterView("r", delay: 0.16)
-                    letterView("n", delay: 0.24)
-                    letterView("t", delay: 0.32)
+                    letterView("a", delay: 0.03)
+                    letterView("r", delay: 0.06)
+                    letterView("n", delay: 0.09)
+                    letterView("t", delay: 0.12)
                 }
                 .offset(x: phase >= 2 ? 0 : 70)
-                .animation(smoothSpring, value: phase)
 
                 // Tagline
                 Text("Capture what you learn")
@@ -63,9 +62,9 @@ struct SplashView: View {
             .font(.system(size: 52, weight: .medium, design: .serif))
             .foregroundStyle(Color.primaryTextColor)
             .opacity(phase >= 2 ? 1 : 0)
-            .scaleEffect(phase >= 2 ? 1 : 0.3)
+            .scaleEffect(phase >= 2 ? 1 : 0.5)
             .animation(
-                .spring(response: 0.6, dampingFraction: 0.75).delay(delay),
+                smoothSpring.delay(delay),
                 value: phase
             )
     }
@@ -80,12 +79,16 @@ struct SplashView: View {
 
         // Phase 2: Expand to full word (L shifts, letters appear)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
-            phase = 2
+            withAnimation(smoothSpring) {
+                phase = 2
+            }
         }
 
         // Phase 3: Show tagline
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
-            phase = 3
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation(.easeOut(duration: 0.6)) {
+                phase = 3
+            }
         }
     }
 }

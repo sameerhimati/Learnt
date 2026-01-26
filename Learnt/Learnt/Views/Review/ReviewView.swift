@@ -254,7 +254,7 @@ struct ReviewView: View {
             }
             .foregroundStyle(Color.secondaryTextColor)
 
-            Text("Reviews at 1, 7, 16, and 35 days optimize long-term retention. After 4 successful reviews, learnings graduate.")
+            Text("Spaced reviews optimize long-term retention. After \(SettingsService.shared.graduationThreshold) successful reviews, learnings graduate.")
                 .font(.system(size: 13, design: .serif))
                 .foregroundStyle(Color.secondaryTextColor.opacity(0.8))
                 .lineSpacing(2)

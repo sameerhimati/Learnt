@@ -23,8 +23,9 @@ final class LearningEntry {
 
     // Spaced repetition
     var nextReviewDate: Date?
-    var reviewInterval: Int       // days until next review (starts at 1)
+    var reviewInterval: Int       // days until next review
     var reviewCount: Int          // times successfully reviewed
+    var firstReflectionDate: Date?  // When user first reflected (starts the review timer)
 
     // Categories (can have multiple)
     @Relationship var categories: [Category] = []
@@ -63,10 +64,11 @@ final class LearningEntry {
         self.simplification = nil
         self.question = nil
 
-        // Spaced repetition defaults
-        self.nextReviewDate = Calendar.current.date(byAdding: .day, value: 1, to: Date())
-        self.reviewInterval = 1
+        // Spaced repetition defaults - timer starts on first reflection, not creation
+        self.nextReviewDate = nil
+        self.reviewInterval = 0
         self.reviewCount = 0
+        self.firstReflectionDate = nil
 
         // Transcription, favorites, and graduation defaults
         self.transcription = nil
