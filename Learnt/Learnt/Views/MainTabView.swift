@@ -6,10 +6,15 @@ import SwiftUI
 import SwiftData
 
 struct MainTabView: View {
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedTab = 1  // Start on Today (center)
     @State private var showWrappedPrompt = false
     @State private var showWrapped = false
     @Query private var entries: [LearningEntry]
+
+    // Share extension state
+    @State private var pendingShareContent: String?
+    @State private var showPendingShareSheet = false
 
     private var settings: SettingsService { SettingsService.shared }
     private var notifications: NotificationService { NotificationService.shared }
@@ -37,6 +42,10 @@ struct MainTabView: View {
         .ignoresSafeArea(.keyboard)
         .onAppear {
             checkWrappedPrompt()
+            checkPendingShare()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            checkPendingShare()
         }
         .alert("Your Month in Learning", isPresented: $showWrappedPrompt) {
             Button("View My Wrapped") {
@@ -58,6 +67,31 @@ struct MainTabView: View {
                     generateAISummary(for: monthDate, completion: completion)
                 }
             )
+        }
+        .sheet(isPresented: $showPendingShareSheet) {
+            if let content = pendingShareContent {
+                AddLearningView(
+                    onSave: { savedContent, application, surprise, simplification, question, categories, audioFileName, transcription in
+                        savePendingShareEntry(
+                            content: savedContent,
+                            application: application,
+                            surprise: surprise,
+                            simplification: simplification,
+                            question: question,
+                            categories: categories,
+                            audioFileName: audioFileName,
+                            transcription: transcription
+                        )
+                        pendingShareContent = nil
+                        showPendingShareSheet = false
+                    },
+                    onCancel: {
+                        pendingShareContent = nil
+                        showPendingShareSheet = false
+                    },
+                    initialContent: content
+                )
+            }
         }
     }
 
@@ -103,6 +137,45 @@ struct MainTabView: View {
             }
             #endif
         }
+    }
+
+    // MARK: - Pending Share Handling
+
+    private func checkPendingShare() {
+        if let pendingShare = SharedDataService.shared.consumePendingShare() {
+            var content = pendingShare.text
+            if let url = pendingShare.url, !url.isEmpty {
+                if !content.isEmpty {
+                    content += "\n\n"
+                }
+                content += url
+            }
+            pendingShareContent = content
+            showPendingShareSheet = true
+        }
+    }
+
+    private func savePendingShareEntry(
+        content: String,
+        application: String?,
+        surprise: String?,
+        simplification: String?,
+        question: String?,
+        categories: [Category],
+        audioFileName: String?,
+        transcription: String?
+    ) {
+        let entry = LearningEntry(content: content, date: Date())
+        entry.application = application
+        entry.surprise = surprise
+        entry.simplification = simplification
+        entry.question = question
+        entry.categories = categories
+        entry.contentAudioFileName = audioFileName
+        entry.transcription = transcription
+
+        modelContext.insert(entry)
+        try? modelContext.save()
     }
 
     private func checkWrappedPrompt() {

@@ -13,6 +13,7 @@ struct TodayView: View {
 
     // Use SceneStorage to persist selected date across tab switches
     @SceneStorage("selectedDate") private var selectedDateTimestamp: Double = Date().timeIntervalSince1970
+    @State private var hasAppearedOnce = false
 
     private var selectedDate: Date {
         get { Date(timeIntervalSince1970: selectedDateTimestamp) }
@@ -98,27 +99,27 @@ struct TodayView: View {
                 arrowDirection: .none
             )
 
-            // Floating buttons (bottom)
-            VStack {
-                Spacer()
-                HStack {
-                    // Library button (bottom-left)
-                    Button(action: { showLibrary = true }) {
-                        Image(systemName: "books.vertical")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.primaryTextColor)
-                            .frame(width: 56, height: 56)
-                            .background(Color.appBackgroundColor)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.leading, 24)
-
+            // Floating buttons (bottom) - hide when card is expanded
+            if expandedCardId == nil {
+                VStack {
                     Spacer()
+                    HStack {
+                        // Library button (bottom-left)
+                        Button(action: { showLibrary = true }) {
+                            Image(systemName: "books.vertical")
+                                .font(.system(size: 20))
+                                .foregroundStyle(Color.primaryTextColor)
+                                .frame(width: 56, height: 56)
+                                .background(Color.appBackgroundColor)
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, 24)
 
-                    // Add button (bottom-right) - only when there are entries and no card is expanded
-                    if !entriesForSelectedDate.isEmpty && expandedCardId == nil {
+                        Spacer()
+
+                        // Add button (bottom-right)
                         Button(action: { showAddLearning = true }) {
                             Image(systemName: "plus")
                                 .font(.system(size: 24, weight: .medium))
@@ -131,8 +132,8 @@ struct TodayView: View {
                         .buttonStyle(.plain)
                         .padding(.trailing, 24)
                     }
+                    .padding(.bottom, 80) // Above tab bar
                 }
-                .padding(.bottom, 80) // Above tab bar
             }
         }
         .gesture(swipeGesture)
@@ -235,6 +236,16 @@ struct TodayView: View {
             // Always sync with settings in case they changed while on another tab
             dailyQuotesEnabled = SettingsService.shared.dailyQuotesEnabled
             isQuoteHidden = quoteService.isQuoteHidden
+
+            // On first appear (cold launch), always reset to today
+            if !hasAppearedOnce {
+                hasAppearedOnce = true
+                setSelectedDate(Date().startOfDay)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .jumpToToday)) { _ in
+            // When user taps Today tab while already on Today, jump to today's date
+            navigateTo(Date())
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
             if newPhase == .active {
@@ -296,25 +307,13 @@ struct TodayView: View {
                 .buttonStyle(.plain)
             }
 
-            // Calendar + Share only (Library moved to floating button)
-            HStack(spacing: 16) {
-                Button(action: { showCalendar = true }) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color.primaryTextColor)
-                }
-                .buttonStyle(.plain)
-
-                Button(action: { showShareSheet = true }) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 20))
-                        .foregroundStyle(entriesForSelectedDate.isEmpty
-                            ? Color.secondaryTextColor
-                            : Color.primaryTextColor)
-                }
-                .buttonStyle(.plain)
-                .disabled(entriesForSelectedDate.isEmpty)
+            // Calendar only
+            Button(action: { showCalendar = true }) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.primaryTextColor)
             }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

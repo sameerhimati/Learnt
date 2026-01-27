@@ -4,6 +4,12 @@
 
 import SwiftUI
 
+// MARK: - Notification for jumping to today
+
+extension Notification.Name {
+    static let jumpToToday = Notification.Name("jumpToToday")
+}
+
 // MARK: - Custom Tab Bar
 
 struct CustomTabBar: View {
@@ -28,7 +34,12 @@ struct CustomTabBar: View {
                 isSelected: selectedTab == 1,
                 isCenter: true
             ) {
-                selectedTab = 1
+                if selectedTab == 1 {
+                    // Already on Today tab - notify to jump to today's date
+                    NotificationCenter.default.post(name: .jumpToToday, object: nil)
+                } else {
+                    selectedTab = 1
+                }
             }
 
             // You tab

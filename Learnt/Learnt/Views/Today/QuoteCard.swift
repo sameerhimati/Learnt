@@ -9,6 +9,8 @@ struct QuoteCard: View {
     let onAddToEntry: (String) -> Void
     let onHide: () -> Void
 
+    @State private var showHistory = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Quote icon + label
@@ -72,6 +74,12 @@ struct QuoteCard: View {
                         .stroke(Color.dividerColor, lineWidth: 1)
                 )
         )
+        .onTapGesture {
+            showHistory = true
+        }
+        .sheet(isPresented: $showHistory) {
+            QuoteHistorySheet()
+        }
     }
 
     private func formatQuoteAsEntry() -> String {

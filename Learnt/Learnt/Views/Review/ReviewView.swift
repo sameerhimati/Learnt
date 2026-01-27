@@ -9,8 +9,12 @@ import SwiftData
 struct ReviewView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allEntries: [LearningEntry]
+    @Query private var allCategories: [Category]
 
     @State private var showReviewSession = false
+    @State private var selectedCategoryFilter: Category?
+    @State private var includeGraduated = false
+    @State private var showFilterSheet = false
 
     private var settings: SettingsService { SettingsService.shared }
 
@@ -20,6 +24,29 @@ struct ReviewView: View {
 
     private var dueForReview: [LearningEntry] {
         allEntries.filter { $0.isDueForReview }
+    }
+
+    /// Entries available for review based on current filter settings
+    private var reviewableEntries: [LearningEntry] {
+        var entries: [LearningEntry]
+
+        // Start with due entries, optionally include graduated
+        if includeGraduated {
+            entries = allEntries.filter { $0.isDueForReview || $0.isGraduated }
+        } else {
+            entries = dueForReview
+        }
+
+        // Apply category filter if selected
+        if let category = selectedCategoryFilter {
+            entries = entries.filter { $0.categories.contains(category) }
+        }
+
+        return entries
+    }
+
+    private var isFilterActive: Bool {
+        selectedCategoryFilter != nil || includeGraduated
     }
 
     private var totalReviewed: Int {
@@ -70,10 +97,36 @@ struct ReviewView: View {
             }
             .navigationTitle("Review")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { showFilterSheet = true }) {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "line.3.horizontal.decrease")
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color.primaryTextColor)
+
+                            // Active filter indicator
+                            if isFilterActive {
+                                Circle()
+                                    .fill(Color.primaryTextColor)
+                                    .frame(width: 6, height: 6)
+                                    .offset(x: 2, y: -2)
+                            }
+                        }
+                    }
+                }
+            }
             .fullScreenCover(isPresented: $showReviewSession) {
                 ReviewSessionView(
-                    entries: dueForReview,
+                    entries: reviewableEntries,
                     onComplete: { showReviewSession = false }
+                )
+            }
+            .sheet(isPresented: $showFilterSheet) {
+                ReviewFilterSheet(
+                    categories: Array(allCategories),
+                    selectedCategory: $selectedCategoryFilter,
+                    includeGraduated: $includeGraduated
                 )
             }
         }
@@ -132,11 +185,19 @@ struct ReviewView: View {
             VStack(spacing: 12) {
                 // Main count display
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Ready for review")
-                        .font(.system(.subheadline, design: .serif))
-                        .foregroundStyle(Color.secondaryTextColor)
+                    HStack(spacing: 6) {
+                        Text("Ready for review")
+                            .font(.system(.subheadline, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
 
-                    Text("\(dueForReview.count)")
+                        if isFilterActive {
+                            Text("(filtered)")
+                                .font(.system(size: 11, design: .serif))
+                                .foregroundStyle(Color.secondaryTextColor.opacity(0.6))
+                        }
+                    }
+
+                    Text("\(reviewableEntries.count)")
                         .font(.system(size: 56, weight: .medium, design: .serif))
                         .foregroundStyle(Color.primaryTextColor)
                 }
@@ -165,26 +226,26 @@ struct ReviewView: View {
             // Start button
             Button(action: { showReviewSession = true }) {
                 HStack(spacing: 8) {
-                    if dueForReview.count > 0 {
+                    if reviewableEntries.count > 0 {
                         Image(systemName: "play.fill")
                             .font(.system(size: 12))
                     }
-                    Text(dueForReview.isEmpty ? "No Reviews Due" : "Start Review Session")
+                    Text(reviewableEntries.isEmpty ? "No Reviews Due" : "Start Review Session")
                 }
                 .font(.system(.body, design: .serif, weight: .medium))
-                .foregroundStyle(dueForReview.isEmpty ? Color.secondaryTextColor : Color.appBackgroundColor)
+                .foregroundStyle(reviewableEntries.isEmpty ? Color.secondaryTextColor : Color.appBackgroundColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(dueForReview.isEmpty ? Color.dividerColor : Color.primaryTextColor)
+                .background(reviewableEntries.isEmpty ? Color.dividerColor : Color.primaryTextColor)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
-            .disabled(dueForReview.isEmpty)
+            .disabled(reviewableEntries.isEmpty)
         }
     }
 
     private var statusIcon: String {
-        if dueForReview.count > 0 {
+        if reviewableEntries.count > 0 {
             return "sparkles"
         } else if let next = nextReviewDate {
             return Calendar.current.isDateInToday(next) ? "clock" : "calendar"
@@ -194,9 +255,9 @@ struct ReviewView: View {
     }
 
     private var statusMessage: String {
-        if dueForReview.count > 0 {
-            let plural = dueForReview.count == 1 ? "learning is" : "learnings are"
-            return "\(dueForReview.count) \(plural) ready to reinforce"
+        if reviewableEntries.count > 0 {
+            let plural = reviewableEntries.count == 1 ? "learning is" : "learnings are"
+            return "\(reviewableEntries.count) \(plural) ready to reinforce"
         } else if let next = nextReviewDate {
             if Calendar.current.isDateInToday(next) {
                 return "Next review later today"

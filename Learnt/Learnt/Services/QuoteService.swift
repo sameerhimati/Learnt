@@ -103,9 +103,24 @@ final class QuoteService {
     ]
 
     var quoteOfTheDay: Quote {
-        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        quote(for: Date())
+    }
+
+    /// Returns the quote for a specific date (deterministic based on day of year)
+    func quote(for date: Date) -> Quote {
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: date) ?? 1
         let index = (dayOfYear - 1) % quotes.count
         return quotes[index]
+    }
+
+    /// Returns quotes for the previous 7 days (not including today)
+    var previousQuotes: [(date: Date, quote: Quote)] {
+        (1...7).compactMap { daysAgo in
+            guard let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) else {
+                return nil
+            }
+            return (date, quote(for: date))
+        }
     }
 
     var isQuoteHidden: Bool {
