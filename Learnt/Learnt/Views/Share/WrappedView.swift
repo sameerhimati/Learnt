@@ -42,6 +42,7 @@ struct WrappedView: View {
     @State private var isLoadingSummary = false
     @State private var currentSummary: String?
     @State private var sharePreviewData: SharePreviewData?
+    @State private var isRegenerating = false
 
     private var displaySummary: String? {
         // Don't show any summary if we don't meet minimum requirements
@@ -244,12 +245,12 @@ struct WrappedView: View {
                 }
                 .foregroundStyle(Color.secondaryTextColor)
 
-                if isLoading {
+                if isLoading || isRegenerating {
                     // Loading indicator
                     HStack(spacing: 8) {
                         ProgressView()
                             .scaleEffect(0.8)
-                        Text("Generating insights...")
+                        Text(isRegenerating ? "Regenerating..." : "Generating insights...")
                             .font(.system(size: 14, design: .serif))
                             .foregroundStyle(Color.secondaryTextColor)
                     }
@@ -260,6 +261,11 @@ struct WrappedView: View {
                         .foregroundStyle(Color.primaryTextColor)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
+
+                    // Regenerate button for current month
+                    if isCurrent {
+                        regenerateButton
+                    }
                 } else if isCurrent && !canGenerateAISummary {
                     // Not enough learnings message
                     Text(insufficientLearningsMessage)
@@ -268,7 +274,7 @@ struct WrappedView: View {
                         .multilineTextAlignment(.center)
                 } else if !AIService.shared.isAvailable {
                     // AI not available on this device/iOS version
-                    Text("AI insights require iOS 26+")
+                    Text(AIService.shared.availabilityMessage)
                         .font(.system(.body, design: .serif))
                         .foregroundStyle(Color.secondaryTextColor)
                         .multilineTextAlignment(.center)
@@ -300,6 +306,68 @@ struct WrappedView: View {
             Text(label)
                 .font(.system(size: 11, design: .serif))
                 .foregroundStyle(Color.secondaryTextColor)
+        }
+    }
+
+    // MARK: - Regenerate Button
+
+    private var monthKey: String {
+        settings.monthKey(from: currentMonth.monthDate)
+    }
+
+    private var canRegenerate: Bool {
+        settings.canRegenerate(for: monthKey)
+    }
+
+    private var remainingRegenerations: Int {
+        settings.remainingRegenerations(for: monthKey)
+    }
+
+    @ViewBuilder
+    private var regenerateButton: some View {
+        if canRegenerate {
+            Button(action: regenerateSummary) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 12))
+                    Text("Regenerate")
+                        .font(.system(size: 12, design: .serif))
+                    Text("(\(remainingRegenerations) left)")
+                        .font(.system(size: 11, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                }
+                .foregroundStyle(Color.secondaryTextColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.appBackgroundColor)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 8)
+        }
+    }
+
+    private func regenerateSummary() {
+        guard canRegenerate, !isRegenerating else { return }
+
+        isRegenerating = true
+
+        // Increment regeneration count
+        settings.incrementRegenerationCount(for: monthKey)
+
+        // Clear existing summary to force regeneration
+        settings.clearAISummary(for: monthKey)
+
+        // Generate new summary
+        onGenerateSummary(currentMonth.monthDate) { summary in
+            guard !summary.isEmpty else {
+                isRegenerating = false
+                return
+            }
+            settings.setAISummary(summary, for: monthKey)
+            settings.setAISummaryLearningCount(currentMonth.totalLearnings, for: monthKey)
+            currentSummary = summary
+            isRegenerating = false
         }
     }
 

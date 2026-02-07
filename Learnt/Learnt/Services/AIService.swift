@@ -44,6 +44,31 @@ final class AIService {
         return false
     }
 
+    /// User-facing message explaining AI availability
+    var availabilityMessage: String {
+        if isAvailable {
+            return "AI insights powered by on-device Apple Intelligence"
+        } else {
+            return "AI insights require iOS 26+ with Apple Intelligence"
+        }
+    }
+
+    /// Generate a fallback summary when AI is unavailable
+    func fallbackSummary(count: Int, period: String) -> MonthlySummaryResult {
+        // Provide a simple, encouraging fallback
+        let message: String
+        if count == 1 {
+            message = "You captured 1 learning in \(period). Keep reflecting on what matters to you."
+        } else if count < 5 {
+            message = "You captured \(count) learnings in \(period). Each reflection builds understanding."
+        } else if count < 15 {
+            message = "You captured \(count) learnings in \(period). Your consistent reflection is building a valuable record."
+        } else {
+            message = "You captured \(count) learnings in \(period). Your dedication to reflection is remarkable."
+        }
+        return MonthlySummaryResult(summary: message, standoutInsight: "")
+    }
+
     private init() {}
 
     // MARK: - Category Suggestions

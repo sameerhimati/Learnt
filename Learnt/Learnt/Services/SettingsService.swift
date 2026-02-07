@@ -312,6 +312,52 @@ final class SettingsService {
         return monthKey < currentKey
     }
 
+    // MARK: - AI Summary Regeneration Tracking
+
+    private var monthlyRegenerationCountsKey: String { "monthlyRegenerationCounts" }
+
+    /// Maximum allowed regenerations per month
+    static let maxRegenerationsPerMonth = 2
+
+    /// Get regeneration count for a specific month
+    func getRegenerationCount(for monthKey: String) -> Int {
+        let counts = UserDefaults.standard.dictionary(forKey: monthlyRegenerationCountsKey) as? [String: Int] ?? [:]
+        return counts[monthKey] ?? 0
+    }
+
+    /// Increment regeneration count for a month
+    func incrementRegenerationCount(for monthKey: String) {
+        var counts = UserDefaults.standard.dictionary(forKey: monthlyRegenerationCountsKey) as? [String: Int] ?? [:]
+        counts[monthKey] = (counts[monthKey] ?? 0) + 1
+        UserDefaults.standard.set(counts, forKey: monthlyRegenerationCountsKey)
+    }
+
+    /// Check if regeneration is allowed for a month
+    func canRegenerate(for monthKey: String) -> Bool {
+        // Can't regenerate past months (they're locked)
+        guard !isMonthPast(monthKey) else { return false }
+
+        // Check regeneration count
+        return getRegenerationCount(for: monthKey) < Self.maxRegenerationsPerMonth
+    }
+
+    /// Get remaining regenerations for a month
+    func remainingRegenerations(for monthKey: String) -> Int {
+        return max(0, Self.maxRegenerationsPerMonth - getRegenerationCount(for: monthKey))
+    }
+
+    /// Clear AI summary to force regeneration
+    func clearAISummary(for monthKey: String) {
+        var summaries = UserDefaults.standard.dictionary(forKey: monthlySummariesKey) as? [String: String] ?? [:]
+        summaries.removeValue(forKey: monthKey)
+        UserDefaults.standard.set(summaries, forKey: monthlySummariesKey)
+
+        // Also clear the learning count so it will regenerate
+        var counts = UserDefaults.standard.dictionary(forKey: monthlySummaryCountsKey) as? [String: Int] ?? [:]
+        counts.removeValue(forKey: monthKey)
+        UserDefaults.standard.set(counts, forKey: monthlySummaryCountsKey)
+    }
+
     // MARK: - Defaults
 
     private var defaultCaptureTime: Date {

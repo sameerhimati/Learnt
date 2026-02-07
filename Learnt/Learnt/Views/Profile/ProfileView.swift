@@ -312,23 +312,24 @@ struct ProfileView: View {
             .sorted { $0.count > $1.count }
 
         Task {
-            #if DEBUG
-            // Use mock data in DEBUG
-            let result = AIService.mockMonthlySummary(count: monthEntries.count, period: period, topCategories: topCats)
-            await MainActor.run {
-                completion(result.summary)
+            // Check if AI is available on this device
+            if AIService.shared.isAvailable {
+                // Use real AI
+                let result = await AIService.shared.generateMonthlySummary(
+                    entries: monthEntries,
+                    period: period,
+                    topCategories: topCats
+                )
+                await MainActor.run {
+                    completion(result?.summary ?? AIService.shared.fallbackSummary(count: monthEntries.count, period: period).summary)
+                }
+            } else {
+                // Use fallback when AI is unavailable
+                let fallback = AIService.shared.fallbackSummary(count: monthEntries.count, period: period)
+                await MainActor.run {
+                    completion(fallback.summary)
+                }
             }
-            #else
-            // Use real AI when available
-            let result = await AIService.shared.generateMonthlySummary(
-                entries: monthEntries,
-                period: period,
-                topCategories: topCats
-            )
-            await MainActor.run {
-                completion(result?.summary ?? "Keep learning, keep growing")
-            }
-            #endif
         }
     }
 

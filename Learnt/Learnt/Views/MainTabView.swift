@@ -12,10 +12,6 @@ struct MainTabView: View {
     @State private var showWrapped = false
     @Query private var entries: [LearningEntry]
 
-    // Share extension state
-    @State private var pendingShareContent: String?
-    @State private var showPendingShareSheet = false
-
     private var settings: SettingsService { SettingsService.shared }
     private var notifications: NotificationService { NotificationService.shared }
 
@@ -42,10 +38,6 @@ struct MainTabView: View {
         .ignoresSafeArea(.keyboard)
         .onAppear {
             checkWrappedPrompt()
-            checkPendingShare()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            checkPendingShare()
         }
         .alert("Your Month in Learning", isPresented: $showWrappedPrompt) {
             Button("View My Wrapped") {
@@ -67,31 +59,6 @@ struct MainTabView: View {
                     generateAISummary(for: monthDate, completion: completion)
                 }
             )
-        }
-        .sheet(isPresented: $showPendingShareSheet) {
-            if let content = pendingShareContent {
-                AddLearningView(
-                    onSave: { savedContent, application, surprise, simplification, question, categories, audioFileName, transcription in
-                        savePendingShareEntry(
-                            content: savedContent,
-                            application: application,
-                            surprise: surprise,
-                            simplification: simplification,
-                            question: question,
-                            categories: categories,
-                            audioFileName: audioFileName,
-                            transcription: transcription
-                        )
-                        pendingShareContent = nil
-                        showPendingShareSheet = false
-                    },
-                    onCancel: {
-                        pendingShareContent = nil
-                        showPendingShareSheet = false
-                    },
-                    initialContent: content
-                )
-            }
         }
     }
 
@@ -121,62 +88,28 @@ struct MainTabView: View {
             .sorted { $0.count > $1.count }
 
         Task {
-            #if DEBUG
-            let result = AIService.mockMonthlySummary(count: monthEntries.count, period: period, topCategories: topCats)
-            await MainActor.run {
-                completion(result.summary)
-            }
-            #else
-            let result = await AIService.shared.generateMonthlySummary(
-                entries: monthEntries,
-                period: period,
-                topCategories: topCats
-            )
-            await MainActor.run {
-                completion(result?.summary ?? "Keep learning, keep growing")
-            }
-            #endif
-        }
-    }
-
-    // MARK: - Pending Share Handling
-
-    private func checkPendingShare() {
-        if let pendingShare = SharedDataService.shared.consumePendingShare() {
-            var content = pendingShare.text
-            if let url = pendingShare.url, !url.isEmpty {
-                if !content.isEmpty {
-                    content += "\n\n"
+            // Check if AI is available on this device
+            if AIService.shared.isAvailable {
+                // Use real AI
+                let result = await AIService.shared.generateMonthlySummary(
+                    entries: monthEntries,
+                    period: period,
+                    topCategories: topCats
+                )
+                await MainActor.run {
+                    completion(result?.summary ?? AIService.shared.fallbackSummary(count: monthEntries.count, period: period).summary)
                 }
-                content += url
+            } else {
+                // Use fallback when AI is unavailable
+                let fallback = AIService.shared.fallbackSummary(count: monthEntries.count, period: period)
+                await MainActor.run {
+                    completion(fallback.summary)
+                }
             }
-            pendingShareContent = content
-            showPendingShareSheet = true
         }
     }
 
-    private func savePendingShareEntry(
-        content: String,
-        application: String?,
-        surprise: String?,
-        simplification: String?,
-        question: String?,
-        categories: [Category],
-        audioFileName: String?,
-        transcription: String?
-    ) {
-        let entry = LearningEntry(content: content, date: Date())
-        entry.application = application
-        entry.surprise = surprise
-        entry.simplification = simplification
-        entry.question = question
-        entry.categories = categories
-        entry.contentAudioFileName = audioFileName
-        entry.transcription = transcription
-
-        modelContext.insert(entry)
-        try? modelContext.save()
-    }
+    // MARK: - Wrapped Prompt
 
     private func checkWrappedPrompt() {
         // Only show if:

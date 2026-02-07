@@ -66,6 +66,9 @@ final class CategoryService {
             }
             save()
         }
+
+        // Sync categories to App Group for share extension
+        syncCategoriesToAppGroup()
     }
 
     // MARK: - Delete
@@ -77,11 +80,28 @@ final class CategoryService {
         save()
     }
 
+    // MARK: - App Group Sync
+
+    /// Sync categories to App Group so share extension can access them
+    func syncCategoriesToAppGroup() {
+        let categories = allCategories()
+        let sharedCategories = categories.map { category in
+            SharedDataService.SharedCategory(
+                id: category.id,
+                name: category.name,
+                icon: category.icon
+            )
+        }
+        SharedDataService.shared.syncCategories(sharedCategories)
+    }
+
     // MARK: - Helpers
 
     private func save() {
         do {
             try modelContext.save()
+            // Sync to App Group after any save
+            syncCategoriesToAppGroup()
         } catch {
             print("Failed to save: \(error)")
         }
