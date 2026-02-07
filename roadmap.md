@@ -187,37 +187,33 @@ LearningEntry {
 
 ## Future Versions
 
-### TestFlight v2 - Bug Fixes & Core Improvements
+### TestFlight v2 - Bug Fixes & Core Improvements ✅
 
 **Goal:** Address user feedback, improve core experience. Cost: $0
 
 **Bugs (from TestFlight feedback)**
-- [ ] Fix splash animation (smooth the "L" → "Learnt" transition, currently choppy)
-- [ ] Reset to today on app launch (currently stays on last viewed day)
-- [ ] Fix edit button overlap with + button (3+ entries)
-- [ ] Rethink date/navigation UX (arrows + date more prominent, swipe not intuitive)
-- [ ] Fix AI summary or graceful fallback for iOS <26 (shows "keep learning, keep growing")
+- [x] Fix splash animation (smooth the "L" → "Learnt" transition) - Refined to 1.7s
+- [x] Reset to today on app launch (after 1+ hour inactive or cold launch)
+- [x] Fix edit button overlap with + button (hide + when card expanded)
+- [x] Date/navigation UX (added "Today" button when viewing past dates)
+- [x] Fix AI summary fallback for iOS <26 (shows availability message + regeneration)
 
 **Capture Friction**
-- [ ] Share sheet extension (share links/text from anywhere → creates new learning)
+- [x] Share sheet extension (SwiftUI UI, auto-import, categories, multiple shares)
 
 **Spaced Repetition Overhaul**
-- [ ] Timer starts on first reflection, not entry creation
-- [ ] Cap all intervals at 35 days max
-- [ ] Adjust intervals for graduation threshold:
-  - 3 reviews: 7 → 21 → 35 days
-  - 4 reviews: 7 → 14 → 28 → 35 days
-  - 5 reviews: 5 → 12 → 21 → 28 → 35 days
-  - 6 reviews: 4 → 9 → 16 → 23 → 30 → 35 days
+- [x] Timer starts on first reflection, not entry creation
+- [x] Cap all intervals at 35 days max
+- [x] Adjust intervals for graduation threshold (3-6 reviews fit within 35 days)
 
 **Library & Organization**
-- [ ] Filter by category/date
-- [ ] Bulk review functionality
-- [ ] Bulk summarize functionality
+- [x] Filter by category/date
+- [x] Bulk review functionality
+- [ ] Bulk summarize functionality (deferred)
 
 **Polish**
-- [ ] Keep quotes from previous days (persist, not just today)
-- [ ] Review by label / re-review graduated learnings
+- [x] Keep quotes from previous days (quote history sheet, tap to view last 7 days)
+- [x] Review by label / re-review graduated learnings (category filter, include graduated toggle)
 
 ---
 
@@ -303,16 +299,16 @@ No API keys required. AI runs locally on A17 Pro / M1+ devices.
 
 ### Known Issues (from TestFlight)
 
-**Bugs:**
-1. Splash animation choppy
-2. App doesn't reset to today on launch
-3. Edit button hidden by + button (3+ entries)
-4. AI summary not generating (iOS 26 only)
+**Bugs:** All resolved ✅
+1. ~~Splash animation choppy~~ → Refined to smooth 1.7s animation
+2. ~~App doesn't reset to today on launch~~ → Resets after 1+ hour inactive
+3. ~~Edit button hidden by + button~~ → + button hides when card expanded
+4. ~~AI summary not generating~~ → Fallback message + regeneration option
 
-**UX Issues:**
-- Date tap → today not discoverable
-- Swipe navigation not intuitive
-- Calendar/share icons could move to make room for date + arrows
+**UX Issues:** Addressed
+- ~~Date tap → today not discoverable~~ → Added "Today" button when viewing past
+- Swipe navigation noted (users adapt quickly)
+- Calendar/share icons position (acceptable for now)
 
 ---
 
