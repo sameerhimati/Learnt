@@ -12,8 +12,10 @@ struct ReviewSessionView: View {
     let onComplete: () -> Void
 
     @State private var currentIndex = 0
-    @State private var showAddReflection = false
     @State private var reflectionText = ""
+    @State private var skippedCount = 0
+    @State private var reviewedCount = 0
+    @State private var graduatedDuringSession = 0
     @FocusState private var isReflectionFocused: Bool
 
     private var entryStore: EntryStore {
@@ -36,18 +38,17 @@ struct ReviewSessionView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header
                 header
 
                 if let entry = currentEntry {
-                    // Learning card
                     ScrollView {
                         learningCard(entry: entry)
                             .padding(16)
                             .padding(.bottom, 100)
                     }
+                    .scrollDismissesKeyboard(.interactively)
+                    .id(currentIndex) // Force view recreation for each card
                 } else {
-                    // Session complete
                     completionView
                 }
             }
@@ -63,20 +64,20 @@ struct ReviewSessionView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(Color.secondaryTextColor)
-                        .frame(width: 32, height: 32)
+                        .frame(width: 44, height: 44)
                         .background(Color.inputBackgroundColor)
                         .clipShape(Circle())
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
 
                 Spacer()
 
-                Text("\(currentIndex + 1) of \(entries.count)")
+                Text("\(min(currentIndex + 1, entries.count)) of \(entries.count)")
                     .font(.system(.subheadline, design: .serif))
                     .foregroundStyle(Color.secondaryTextColor)
             }
 
-            // Progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Rectangle()
@@ -86,6 +87,7 @@ struct ReviewSessionView: View {
                     Rectangle()
                         .fill(Color.primaryTextColor)
                         .frame(width: geo.size.width * progress, height: 3)
+                        .animation(.easeInOut(duration: 0.3), value: progress)
                 }
             }
             .frame(height: 3)
@@ -113,88 +115,73 @@ struct ReviewSessionView: View {
                 .background(Color.inputBackgroundColor)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
 
-            // Reflection
-            if let reflection = entry.reflection {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Your reflection")
-                        .font(.system(.caption, design: .serif))
-                        .foregroundStyle(Color.secondaryTextColor)
-
-                    Text(reflection)
-                        .font(.system(size: 14, design: .serif))
-                        .foregroundStyle(Color.primaryTextColor)
-                        .lineSpacing(2)
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.inputBackgroundColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-            } else if showAddReflection {
-                // Inline reflection input
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Add a reflection")
-                        .font(.system(.caption, design: .serif))
-                        .foregroundStyle(Color.secondaryTextColor)
-
-                    TextField("Any thoughts on this?", text: $reflectionText, axis: .vertical)
-                        .font(.system(.body, design: .serif))
-                        .foregroundStyle(Color.primaryTextColor)
-                        .focused($isReflectionFocused)
-                        .lineLimit(3...6)
-                        .padding(12)
-                        .background(Color.inputBackgroundColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-            } else {
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showAddReflection = true
-                        isReflectionFocused = true
-                    }
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus.circle")
-                            .font(.system(size: 14))
-                        Text("Add a reflection")
-                            .font(.system(.subheadline, design: .serif))
-                    }
+            // Always-visible reflection field
+            VStack(alignment: .leading, spacing: 8) {
+                Text(entry.hasReflection ? "Your reflection" : "Add a reflection")
+                    .font(.system(.caption, design: .serif))
                     .foregroundStyle(Color.secondaryTextColor)
-                }
-                .buttonStyle(.plain)
+
+                TextField("How does this connect to what you know?", text: $reflectionText, axis: .vertical)
+                    .font(.system(.body, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+                    .focused($isReflectionFocused)
+                    .lineLimit(3...6)
+                    .padding(12)
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
             Spacer()
-                .frame(height: 24)
+                .frame(height: 16)
 
-            // Action prompt
+            // Rating
             VStack(alignment: .leading, spacing: 12) {
-                Text("Still with you?")
+                Text("How well do you know this?")
                     .font(.system(.subheadline, design: .serif))
                     .foregroundStyle(Color.secondaryTextColor)
 
                 HStack(spacing: 12) {
                     ratingButton(
                         title: "Got it",
-                        subtitle: "Next interval",
+                        subtitle: rememberSubtitle(for: entry),
                         isPrimary: true,
-                        result: .gotIt
+                        action: { recordAndAdvance(result: .gotIt) }
                     )
 
                     ratingButton(
-                        title: "Review again",
-                        subtitle: "See it sooner",
+                        title: "Still learning",
+                        subtitle: "Review tomorrow",
                         isPrimary: false,
-                        result: .reviewAgain
+                        action: { recordAndAdvance(result: .reviewAgain) }
                     )
                 }
+
+                Button(action: skipAndAdvance) {
+                    Text("Skip")
+                        .font(.system(.subheadline, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
+        }
+        .onAppear {
+            reflectionText = entry.reflection ?? ""
         }
     }
 
-    private func ratingButton(title: String, subtitle: String, isPrimary: Bool, result: ReviewResult) -> some View {
-        Button(action: {
-            recordAndAdvance(result: result)
-        }) {
+    private func rememberSubtitle(for entry: LearningEntry) -> String {
+        let days = entryStore.nextIntervalDays(for: entry)
+        if days == 0 {
+            return "Graduates"
+        }
+        return "Next in \(days) days"
+    }
+
+    private func ratingButton(title: String, subtitle: String, isPrimary: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             VStack(spacing: 4) {
                 Text(title)
                     .font(.system(.body, design: .serif, weight: .medium))
@@ -226,13 +213,50 @@ struct ReviewSessionView: View {
                 .font(.system(.title2, design: .serif, weight: .medium))
                 .foregroundStyle(Color.primaryTextColor)
 
-            Text("You reviewed \(entries.count) learning\(entries.count == 1 ? "" : "s")")
-                .font(.system(.body, design: .serif))
-                .foregroundStyle(Color.secondaryTextColor)
+            VStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Text("Reviewed \(reviewedCount)")
+                        .font(.system(.body, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    if skippedCount > 0 {
+                        Text("· Skipped \(skippedCount)")
+                            .font(.system(.body, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+                    }
+                }
+
+                if graduatedDuringSession > 0 {
+                    VStack(spacing: 6) {
+                        Text("\(graduatedDuringSession) learning\(graduatedDuringSession == 1 ? "" : "s") graduated!")
+                            .font(.system(.subheadline, design: .serif, weight: .medium))
+                            .foregroundStyle(Color.primaryTextColor)
+
+                        // First-time graduation explanation
+                        if !OnboardingProgressService.shared.hasSeenFirstGraduation {
+                            Text("Graduated means you've proven you know this.\nIt won't appear in reviews anymore.")
+                                .font(.system(.caption, design: .serif))
+                                .foregroundStyle(Color.secondaryTextColor)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(3)
+                        }
+                    }
+                }
+            }
+
+            if let nextDate = nextReviewAfterSession {
+                Text("Next review \(nextDate.relativeDescription)")
+                    .font(.system(.caption, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                    .padding(.top, 8)
+            }
 
             Spacer()
 
-            Button(action: onComplete) {
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                onComplete()
+            }) {
                 Text("Done")
                     .font(.system(.body, design: .serif, weight: .medium))
                     .foregroundStyle(Color.appBackgroundColor)
@@ -247,29 +271,75 @@ struct ReviewSessionView: View {
         }
     }
 
+    private var nextReviewAfterSession: Date? {
+        entries
+            .compactMap { $0.nextReviewDate }
+            .filter { $0 > Date() }
+            .min()
+    }
+
     // MARK: - Actions
 
     private func recordAndAdvance(result: ReviewResult) {
         guard let entry = currentEntry else { return }
 
-        // Save reflection if entered during review
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+
         let trimmed = reflectionText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
+        if !trimmed.isEmpty && trimmed != (entry.reflection ?? "") {
             entryStore.updateReflection(entry, reflection: trimmed)
         }
 
-        // Record the review result
-        entryStore.recordReview(entry, result: result)
+        let willGraduate = result == .gotIt &&
+            (entry.reviewCount + 1) >= SettingsService.shared.graduationThreshold
 
-        // Reset state for next entry
-        showAddReflection = false
+        entryStore.recordReview(entry, result: result)
+        reviewedCount += 1
+
+        if willGraduate {
+            graduatedDuringSession += 1
+            OnboardingProgressService.shared.reach(.firstGraduation)
+        }
+
         reflectionText = ""
         isReflectionFocused = false
 
-        // Move to next
         withAnimation(.easeInOut(duration: 0.2)) {
             currentIndex += 1
         }
+    }
+
+    private func skipAndAdvance() {
+        if let entry = currentEntry {
+            let trimmed = reflectionText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty && trimmed != (entry.reflection ?? "") {
+                entryStore.updateReflection(entry, reflection: trimmed)
+            }
+        }
+
+        skippedCount += 1
+        reflectionText = ""
+        isReflectionFocused = false
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            currentIndex += 1
+        }
+    }
+}
+
+// MARK: - Date Relative Description
+
+private extension Date {
+    var relativeDescription: String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(self) {
+            return "later today"
+        } else if calendar.isDateInTomorrow(self) {
+            return "tomorrow"
+        } else if let days = calendar.dateComponents([.day], from: Date().startOfDay, to: self.startOfDay).day {
+            return "in \(days) days"
+        }
+        return "soon"
     }
 }
 

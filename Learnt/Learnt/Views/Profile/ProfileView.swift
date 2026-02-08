@@ -14,8 +14,11 @@ struct ProfileView: View {
     @State private var showGraduationPicker = false
     @State private var showAppearancePicker = false
     @State private var selectedStatExplanation: StatType?
-    @State private var showTutorialResetAlert = false
-    @State private var dailyQuotesEnabled: Bool = SettingsService.shared.dailyQuotesEnabled
+@State private var dailyQuotesEnabled: Bool = SettingsService.shared.dailyQuotesEnabled
+    @State private var appearanceModeLabel: String = SettingsService.shared.appearanceMode.rawValue
+    @State private var graduationLabel: String = "\(SettingsService.shared.graduationThreshold) reviews to graduate"
+
+    var onSwitchToReview: (() -> Void)?
 
     // Settings observation for reminder subtitle updates
     private var settings: SettingsService { SettingsService.shared }
@@ -99,21 +102,24 @@ struct ProfileView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Main stats
-                    mainStatsSection
+                    // 1. Library (top section)
+                    librarySection
                         .padding(.top, 16)
 
-                    // Review stats (always show, even when zero)
-                    reviewStatsSection
-
-                    // Library link
-                    librarySection
+                    // 2. Your Progress
+                    progressSection
 
                     Divider()
                         .background(Color.dividerColor)
 
-                    // Settings section
+                    // 3. Settings
                     settingsSection
+
+                    Divider()
+                        .background(Color.dividerColor)
+
+                    // 4. About (footer)
+                    aboutSection
 
                     Spacer()
                         .frame(height: 60)
@@ -121,7 +127,7 @@ struct ProfileView: View {
                 .padding(.horizontal, 16)
             }
             .background(Color.appBackgroundColor)
-            .navigationTitle("You")
+            .navigationTitle("More")
             .navigationBarTitleDisplayMode(.large)
             .alert("Clear All Data?", isPresented: $showClearDataAlert) {
                 Button("Cancel", role: .cancel) { }
@@ -131,18 +137,17 @@ struct ProfileView: View {
             } message: {
                 Text("This will permanently delete all \(entries.count) learnings. This cannot be undone.")
             }
-            .alert("Tutorial Reset", isPresented: $showTutorialResetAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Feature tips have been reset. You'll see them again as you navigate the app.")
-            }
-            .sheet(isPresented: $showLibrary) {
+.sheet(isPresented: $showLibrary) {
                 LibraryView()
             }
-            .sheet(isPresented: $showGraduationPicker) {
+            .sheet(isPresented: $showGraduationPicker, onDismiss: {
+                graduationLabel = "\(SettingsService.shared.graduationThreshold) reviews to graduate"
+            }) {
                 GraduationSettingsSheet()
             }
-            .sheet(isPresented: $showAppearancePicker) {
+            .sheet(isPresented: $showAppearancePicker, onDismiss: {
+                appearanceModeLabel = SettingsService.shared.appearanceMode.rawValue
+            }) {
                 AppearanceSettingsSheet()
             }
             .sheet(item: $selectedStatExplanation) { stat in
@@ -167,7 +172,7 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Library")
-                        .font(.system(.body, design: .serif))
+                        .font(.system(.body, design: .serif, weight: .medium))
                         .foregroundStyle(Color.primaryTextColor)
                     Text("Browse all your learnings")
                         .font(.system(.caption, design: .serif))
@@ -187,40 +192,48 @@ struct ProfileView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Main Stats
+    // MARK: - Progress Section
 
-    private var mainStatsSection: some View {
-        HStack(spacing: 12) {
-            statCard(value: "\(totalEntries)", label: "Learnings", icon: "lightbulb")
-            statCard(value: "\(totalDays)", label: "Days", icon: "calendar")
-        }
-    }
-
-    // MARK: - Review Stats
-
-    private var reviewStatsSection: some View {
+    private var progressSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Review Progress")
+            Text("Your Progress")
                 .font(.system(.subheadline, design: .serif, weight: .medium))
                 .foregroundStyle(Color.secondaryTextColor)
 
+            // Main stats
+            HStack(spacing: 12) {
+                statCard(value: "\(totalEntries)", label: "Learnings", icon: "lightbulb")
+                statCard(value: "\(totalDays)", label: "Days", icon: "calendar")
+            }
+
+            // Review stats
             HStack(spacing: 12) {
                 tappableStatCard(value: "\(reviewedCount)", label: "Reviewed", type: .reviewed)
                 tappableStatCard(value: "\(graduatedCount)", label: "Graduated", type: .graduated)
                 tappableStatCard(value: "\(reflectionCount)", label: "Reflected", type: .reflected)
             }
 
+            // Due for review (tappable to switch tab)
             if dueForReview > 0 {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.secondaryTextColor)
+                Button(action: { onSwitchToReview?() }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.secondaryTextColor)
 
-                    Text("\(dueForReview) learning\(dueForReview == 1 ? "" : "s") ready for review")
-                        .font(.system(.subheadline, design: .serif))
-                        .foregroundStyle(Color.secondaryTextColor)
+                        Text("\(dueForReview) learning\(dueForReview == 1 ? "" : "s") ready for review")
+                            .font(.system(.subheadline, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                    }
+                    .padding(.top, 4)
                 }
-                .padding(.top, 4)
+                .buttonStyle(.plain)
             }
         }
     }
@@ -236,88 +249,19 @@ struct ProfileView: View {
             NavigationLink {
                 ReminderSettingsView()
             } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "bell")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.secondaryTextColor)
-                        .frame(width: 24)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Reminders")
-                            .font(.system(.body, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                        Text(reminderSubtitle)
-                            .font(.system(.caption, design: .serif))
-                            .foregroundStyle(Color.secondaryTextColor)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
-                .padding(16)
-                .background(Color.inputBackgroundColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                settingsRow(icon: "bell", title: "Reminders", subtitle: reminderSubtitle)
             }
             .buttonStyle(.plain)
 
             // Graduation threshold
             Button(action: { showGraduationPicker = true }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "checkmark.seal")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.secondaryTextColor)
-                        .frame(width: 24)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Graduation")
-                            .font(.system(.body, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                        Text("\(settings.graduationThreshold) reviews to graduate")
-                            .font(.system(.caption, design: .serif))
-                            .foregroundStyle(Color.secondaryTextColor)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
-                .padding(16)
-                .background(Color.inputBackgroundColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                settingsRow(icon: "checkmark.seal", title: "Graduation", subtitle: graduationLabel)
             }
             .buttonStyle(.plain)
 
             // Appearance
             Button(action: { showAppearancePicker = true }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "moon")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.secondaryTextColor)
-                        .frame(width: 24)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Appearance")
-                            .font(.system(.body, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                        Text(settings.appearanceMode.rawValue)
-                            .font(.system(.caption, design: .serif))
-                            .foregroundStyle(Color.secondaryTextColor)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
-                .padding(16)
-                .background(Color.inputBackgroundColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                settingsRow(icon: "moon", title: "Appearance", subtitle: appearanceModeLabel)
             }
             .buttonStyle(.plain)
 
@@ -353,65 +297,28 @@ struct ProfileView: View {
                     QuoteService.shared.showQuote()
                 }
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
+    // MARK: - About Section (Footer)
+
+    private var aboutSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
             // Replay Tutorial button
             Button(action: {
                 CoachMarkService.shared.resetAllMarks()
-                showTutorialResetAlert = true
+                OnboardingProgressService.shared.resetAll()
+                SettingsService.shared.hasSeenOnboarding = false
+                NotificationCenter.default.post(name: .replayOnboarding, object: nil)
             }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.secondaryTextColor)
-                        .frame(width: 24)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Replay Tutorial")
-                            .font(.system(.body, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                        Text("Show feature tips again")
-                            .font(.system(.caption, design: .serif))
-                            .foregroundStyle(Color.secondaryTextColor)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
-                .padding(16)
-                .background(Color.inputBackgroundColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                settingsRow(icon: "arrow.counterclockwise", title: "Replay Tutorial", subtitle: "Replay the guided walkthrough")
             }
             .buttonStyle(.plain)
 
             // Clear data button
             Button(action: { showClearDataAlert = true }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.secondaryTextColor)
-                        .frame(width: 24)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Clear All Data")
-                            .font(.system(.body, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                        Text("Delete all learnings")
-                            .font(.system(.caption, design: .serif))
-                            .foregroundStyle(Color.secondaryTextColor)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
-                .padding(16)
-                .background(Color.inputBackgroundColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                settingsRow(icon: "trash", title: "Clear All Data", subtitle: "Delete all learnings")
             }
             .buttonStyle(.plain)
 
@@ -436,6 +343,33 @@ struct ProfileView: View {
     }
 
     // MARK: - Helpers
+
+    private func settingsRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundStyle(Color.secondaryTextColor)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(.body, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+                Text(subtitle)
+                    .font(.system(.caption, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.secondaryTextColor)
+        }
+        .padding(16)
+        .background(Color.inputBackgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
 
     private func clearAllData() {
         for entry in entries {
@@ -598,6 +532,14 @@ struct AppearanceSettingsSheet: View {
     @State private var selectedMode: SettingsService.AppearanceMode = SettingsService.shared.appearanceMode
     @State private var selectedIcon: SettingsService.AppIcon = SettingsService.shared.currentAppIcon
 
+    private var sheetColorScheme: ColorScheme? {
+        switch selectedMode {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -635,6 +577,7 @@ struct AppearanceSettingsSheet: View {
                                         }
                                     }
                                     .padding(16)
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
 
@@ -691,11 +634,11 @@ struct AppearanceSettingsSheet: View {
                                                 .frame(width: 16, height: 16)
                                         }
                                     }
+                                    .frame(maxWidth: .infinity)
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
                             }
-
-                            Spacer()
                         }
                         .padding(16)
                         .background(Color.inputBackgroundColor)
@@ -716,6 +659,7 @@ struct AppearanceSettingsSheet: View {
             }
         }
         .presentationDetents([.large])
+        .preferredColorScheme(sheetColorScheme)
     }
 
     private func iconFor(_ mode: SettingsService.AppearanceMode) -> String {

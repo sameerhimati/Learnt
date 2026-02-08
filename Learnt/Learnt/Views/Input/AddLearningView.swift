@@ -111,7 +111,7 @@ struct AddLearningView: View {
 
             // Only auto-focus for text mode
             if inputMode == .text {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     focusedField = .content
                 }
             }

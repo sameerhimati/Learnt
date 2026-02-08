@@ -7,49 +7,90 @@ import SwiftUI
 
 struct EmptyStateView: View {
     let isToday: Bool
+    var date: Date = Date()
+    var totalEntryCount: Int = 0
     let onAdd: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 16) {
             Spacer()
 
-            Text(isToday ? "What did you learn today?" : "Nothing recorded")
-                .font(.system(.title2, design: .serif))
-                .foregroundStyle(Color.secondaryTextColor)
-                .multilineTextAlignment(.center)
-
             if isToday {
-                Button(action: onAdd) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .regular))
-                        .foregroundStyle(Color.primaryTextColor)
-                        .frame(width: 64, height: 64)
-                        .background(Color.inputBackgroundColor)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .coachMark(
-                    .addLearning,
-                    title: "Add a Learning",
-                    message: "Tap here to capture something you learned today. Use voice or text.",
-                    arrowDirection: .up
-                )
+                todayContent
+            } else {
+                pastDateContent
             }
 
             Spacer()
         }
         .frame(maxWidth: .infinity)
     }
+
+    // MARK: - Today Variants
+
+    @ViewBuilder
+    private var todayContent: some View {
+        if totalEntryCount == 0 {
+            // First time ever — educate with examples
+            Text("What did you learn today?")
+                .font(.system(.title2, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor)
+                .multilineTextAlignment(.center)
+
+            Text("A conversation. A podcast. A mistake.\nAnything worth remembering.")
+                .font(.system(.subheadline, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+        } else {
+            // Returning user, nothing today
+            Text("Nothing captured today yet.")
+                .font(.system(.title2, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    // MARK: - Past Date
+
+    private var pastDateContent: some View {
+        VStack(spacing: 16) {
+            Text("No learnings on \(date.formattedShort).")
+                .font(.system(.title2, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor)
+                .multilineTextAlignment(.center)
+
+            Button(action: onAdd) {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .medium))
+                    Text("Remember something?")
+                        .font(.system(.subheadline, design: .serif))
+                }
+                .foregroundStyle(Color.primaryTextColor)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.inputBackgroundColor)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+    }
 }
 
 #Preview {
     VStack {
-        EmptyStateView(isToday: true, onAdd: {})
+        EmptyStateView(isToday: true, totalEntryCount: 0, onAdd: {})
             .frame(height: 300)
 
         Divider()
 
-        EmptyStateView(isToday: false, onAdd: {})
+        EmptyStateView(isToday: true, totalEntryCount: 5, onAdd: {})
+            .frame(height: 200)
+
+        Divider()
+
+        EmptyStateView(isToday: false, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, onAdd: {})
             .frame(height: 200)
     }
     .background(Color.appBackgroundColor)

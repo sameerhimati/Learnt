@@ -192,6 +192,27 @@ final class EntryStore {
         save()
     }
 
+    /// Returns what the next interval would be if the user taps "I remember" (without recording)
+    func nextIntervalDays(for entry: LearningEntry) -> Int {
+        let threshold = SettingsService.shared.graduationThreshold
+        let nextCount = entry.reviewCount + 1
+
+        if nextCount >= threshold {
+            return 0 // Would graduate
+        }
+
+        let intervals: [Int]
+        switch threshold {
+        case 3:  intervals = [7, 21, 35]
+        case 4:  intervals = [7, 14, 28, 35]
+        case 5:  intervals = [5, 12, 21, 28, 35]
+        case 6:  intervals = [4, 9, 16, 23, 30, 35]
+        default: intervals = [7, 14, 28, 35]
+        }
+
+        return intervals[min(nextCount - 1, intervals.count - 1)]
+    }
+
     // MARK: - Delete
 
     func deleteEntry(_ entry: LearningEntry) {

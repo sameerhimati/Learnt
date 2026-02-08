@@ -18,7 +18,7 @@ struct MainTabView: View {
                 case 1:
                     TodayView()
                 case 2:
-                    ProfileView()
+                    ProfileView(onSwitchToReview: { selectedTab = 0 })
                 default:
                     TodayView()
                 }

@@ -50,6 +50,7 @@ struct LearntApp: App {
                 } else if !hasSeenOnboarding {
                     OnboardingView {
                         SettingsService.shared.hasSeenOnboarding = true
+                        OnboardingProgressService.shared.isFirstSession = true
                         withAnimation(.easeInOut(duration: 0.3)) {
                             hasSeenOnboarding = true
                         }
@@ -83,6 +84,11 @@ struct LearntApp: App {
             }
             .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
                 appearanceMode = SettingsService.shared.appearanceMode
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .replayOnboarding)) { _ in
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    hasSeenOnboarding = false
+                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {

@@ -34,7 +34,7 @@ Core capture and review loop.
 - Multiple entries per day
 - Edit existing entries
 - Dark mode support
-- 3-tab navigation (Insights | Today | You)
+- 3-tab navigation (Review | Today | More)
 - Calendar overlay (pull down)
 - Local persistence (SwiftData)
 - Haptic feedback
@@ -49,7 +49,7 @@ Polish for real users.
 - Notification reminders (capture + review times)
 - Full calendar with month view
 - Entry search
-- 3-screen onboarding
+- 7-page guided onboarding
 - Settings (notifications, theme, appearance)
 - Custom tab bar design
 - Empty states
@@ -174,9 +174,11 @@ LearningEntry {
 | Search | ✅ |
 | Calendar navigation | ✅ |
 | Notifications | ✅ |
-| Streaks + milestones | ✅ |
-| Monthly Wrapped | ✅ |
-| Share cards (entry, streak, wrapped) | ✅ |
+| Streaks + milestones | ❌ Removed (v3) |
+| Monthly Wrapped | ❌ Removed (v3) |
+| Share cards (entry, streak, wrapped) | ❌ Removed (v3) |
+| Inline quick-entry bar | ✅ |
+| 7-page onboarding walkthrough | ✅ |
 | AI summaries | ✅ (iOS 26+) |
 | Dark mode | ✅ |
 | Onboarding | ✅ |
@@ -217,7 +219,63 @@ LearningEntry {
 
 ---
 
-### TestFlight v3 / App Store Launch
+### TestFlight v3 - Simplification & UX Overhaul ✅
+
+**Goal:** Strip to core loop, peak every remaining feature. Cost: $0
+
+**Stripped Features (removed)**
+- [x] Bulk operations from Library
+- [x] Share cards and sharing functionality
+- [x] Monthly Wrapped feature
+- [x] Streaks & milestone celebrations
+- [x] Dead coach marks cleanup
+
+**Capture — Near-Zero Friction**
+- [x] Inline quick-entry bar on Today (iMessage-style, replaces floating + button)
+- [x] Mic and expand buttons on entry bar for voice/full editor
+- [x] Remove Library floating button from Today
+
+**Reflection — Promoted**
+- [x] Promote reflection prompt on LearningCard (visible collapsed, not buried)
+- [x] Always-visible reflection field in review sessions
+
+**Review — Clarity**
+- [x] Review landing shows due entries preview list (content + relative date)
+- [x] Better rating UX ("Could you explain this?" with actual next interval shown)
+- [x] Skip option in review sessions
+- [x] Richer completion screen (reviewed/skipped/graduated counts)
+- [x] Differentiate "all caught up" vs "no learnings in review" states
+
+**Navigation & Polish**
+- [x] Renamed "You" tab to "More" with new icon
+- [x] Restructured More tab (Library top, progress, settings, about footer)
+- [x] Compact Today header (tighter date, smaller arrows)
+- [x] Better keyboard tracking (interactive dismiss, animated resize)
+- [x] Header/content spacing improvements
+
+**Onboarding**
+- [x] 7-page guided walkthrough (Welcome → Capture → Reflect → Review → Graduate → Tabs → Start)
+- [x] Visual review timeline showing spaced repetition intervals
+- [x] Skip button always visible
+- [x] Replay Tutorial from More tab
+
+**Settings Polish**
+- [x] Appearance sheet follows theme changes in real-time
+- [x] Settings labels update on dismiss
+- [x] Full-area tap targets on app icon selection
+- [x] Faster AddLearningView focus
+
+**Quote Card**
+- [x] Simplified (hide only, removed "save as entry")
+
+**Future: In-App Coaching (planned)**
+- [ ] Contextual coach marks throughout the app (not just onboarding)
+- [ ] Coaching on first reflection, first review, graduation, etc.
+- [ ] Progressive disclosure of features as user engages
+
+---
+
+### TestFlight v4 / App Store Launch
 
 **Goal:** Cloud infrastructure and public release. Cost: ~$0-20/month
 

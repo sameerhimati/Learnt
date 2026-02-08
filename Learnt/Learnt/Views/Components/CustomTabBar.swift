@@ -8,6 +8,7 @@ import SwiftUI
 
 extension Notification.Name {
     static let jumpToToday = Notification.Name("jumpToToday")
+    static let replayOnboarding = Notification.Name("replayOnboarding")
 }
 
 // MARK: - Custom Tab Bar
@@ -19,42 +20,44 @@ struct CustomTabBar: View {
         HStack(spacing: 0) {
             // Review tab
             TabBarItem(
-                icon: "arrow.triangle.2.circlepath",
+                icon: "rectangle.stack",
                 label: "Review",
                 isSelected: selectedTab == 0,
                 isCenter: false
             ) {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 selectedTab = 0
             }
 
             // Today tab (center, larger)
             TabBarItem(
-                icon: "scribble.variable",
+                icon: "pencil.line",
                 label: "Today",
                 isSelected: selectedTab == 1,
                 isCenter: true
             ) {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 if selectedTab == 1 {
-                    // Already on Today tab - notify to jump to today's date
                     NotificationCenter.default.post(name: .jumpToToday, object: nil)
                 } else {
                     selectedTab = 1
                 }
             }
 
-            // You tab
+            // More tab
             TabBarItem(
-                icon: "person",
-                label: "You",
+                icon: "line.3.horizontal",
+                label: "More",
                 isSelected: selectedTab == 2,
                 isCenter: false
             ) {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 selectedTab = 2
             }
         }
         .padding(.horizontal, 24)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
         .background(
             Color.appBackgroundColor
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: -4)
@@ -82,7 +85,7 @@ private struct TabBarItem: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
                 Image(systemName: icon)
                     .font(.system(size: iconSize, weight: fontWeight))
                     .foregroundStyle(isSelected ? Color.primaryTextColor : Color.secondaryTextColor)
@@ -92,6 +95,7 @@ private struct TabBarItem: View {
                     .foregroundStyle(isSelected ? Color.primaryTextColor : Color.secondaryTextColor)
             }
             .frame(maxWidth: .infinity)
+            .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

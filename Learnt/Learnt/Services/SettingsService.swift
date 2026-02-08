@@ -93,12 +93,12 @@ final class SettingsService {
 
     // MARK: - Daily Quotes
 
-    /// Whether daily quotes are shown on the Today screen (default: false)
+    /// Whether daily quotes are shown on the Today screen (default: true)
     var dailyQuotesEnabled: Bool {
         get {
-            // Default to false if not set (users can enable in Settings)
+            // Default to true if not set
             if UserDefaults.standard.object(forKey: Keys.dailyQuotesEnabled) == nil {
-                return false
+                return true
             }
             return UserDefaults.standard.bool(forKey: Keys.dailyQuotesEnabled)
         }

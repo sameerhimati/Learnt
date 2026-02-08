@@ -24,18 +24,15 @@ struct ReviewView: View {
         allEntries.filter { $0.isDueForReview }
     }
 
-    /// Entries available for review based on current filter settings
     private var reviewableEntries: [LearningEntry] {
         var entries: [LearningEntry]
 
-        // Start with due entries, optionally include graduated
         if includeGraduated {
             entries = allEntries.filter { $0.isDueForReview || $0.isGraduated }
         } else {
             entries = dueForReview
         }
 
-        // Apply category filter if selected
         if let category = selectedCategoryFilter {
             entries = entries.filter { $0.categories.contains(category) }
         }
@@ -47,21 +44,12 @@ struct ReviewView: View {
         selectedCategoryFilter != nil || includeGraduated
     }
 
-    private var totalReviewed: Int {
-        allEntries.filter { $0.reviewCount > 0 }.count
-    }
-
-    private var graduatedCount: Int {
-        allEntries.filter { $0.isGraduated }.count
-    }
-
     private var nextReviewDate: Date? {
         allEntries
             .compactMap { $0.nextReviewDate }
             .filter { $0 > Date() }
             .min()
     }
-
 
     var body: some View {
         NavigationStack {
@@ -73,17 +61,15 @@ struct ReviewView: View {
                     emptyState
                 } else {
                     ScrollView {
-                        VStack(spacing: 24) {
-                            // Ready for review section
-                            reviewReadySection
-
-                            // Stats section
-                            statsSection
-
-                            // Science-backed explanation
-                            scienceNote
+                        VStack(spacing: 0) {
+                            if !reviewableEntries.isEmpty {
+                                // Due entries with start button
+                                dueSection
+                            } else {
+                                // All caught up
+                                caughtUpSection
+                            }
                         }
-                        .padding(16)
                         .padding(.bottom, 80)
                     }
                 }
@@ -97,13 +83,14 @@ struct ReviewView: View {
                             Image(systemName: "line.3.horizontal.decrease")
                                 .font(.system(size: 16))
                                 .foregroundStyle(Color.primaryTextColor)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
 
-                            // Active filter indicator
                             if isFilterActive {
                                 Circle()
                                     .fill(Color.primaryTextColor)
                                     .frame(width: 6, height: 6)
-                                    .offset(x: 2, y: -2)
+                                    .offset(x: 4, y: 6)
                             }
                         }
                     }
@@ -127,24 +114,66 @@ struct ReviewView: View {
 
     // MARK: - Empty State
 
+    /// Whether any entry has a reflection (meaning something is in the review pipeline)
+    private var hasAnyReflections: Bool {
+        allEntries.contains { $0.hasReflection }
+    }
+
     private var emptyState: some View {
         VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 56, weight: .light))
-                .foregroundStyle(Color.secondaryTextColor.opacity(0.4))
+            if allEntries.isEmpty {
+                // No entries at all
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 56, weight: .light))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.4))
 
-            VStack(spacing: 8) {
-                Text("No learnings yet")
-                    .font(.system(.title2, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
+                VStack(spacing: 8) {
+                    Text("Review starts after you reflect")
+                        .font(.system(.title3, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.secondaryTextColor)
 
-                Text("Add your first learning in the Today tab.\nThey'll appear here for spaced review.")
-                    .font(.system(.body, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
+                    Text("Capture a learning in Today, then add\na reflection. That starts the review timer.")
+                        .font(.system(.body, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                }
+            } else if !hasAnyReflections {
+                // Has entries but no reflections yet
+                Image(systemName: "text.bubble")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.4))
+
+                VStack(spacing: 8) {
+                    Text("Add a reflection to start review")
+                        .font(.system(.title3, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    Text("Tap any learning in Today and add a reflection.\nYou'll be prompted to review it at the right time.")
+                        .font(.system(.body, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                }
+            } else {
+                // Has reflections but nothing due (shouldn't normally reach here, but fallback)
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 56, weight: .light))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.4))
+
+                VStack(spacing: 8) {
+                    Text("Nothing due yet")
+                        .font(.system(.title3, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    Text("Your learnings will appear here\nwhen it's time to review them.")
+                        .font(.system(.body, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                }
             }
 
             Spacer()
@@ -154,153 +183,163 @@ struct ReviewView: View {
         .padding(.horizontal, 32)
     }
 
-    // MARK: - Review Ready Section
+    // MARK: - Due Section
 
-    private var reviewReadySection: some View {
-        VStack(spacing: 16) {
-            // Hero card with count and status
-            VStack(spacing: 12) {
-                // Main count display
-                VStack(alignment: .leading, spacing: 4) {
+    private var dueSection: some View {
+        VStack(spacing: 0) {
+            // Header with start button
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(reviewableEntries.count) ready")
+                        .font(.system(.title3, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.primaryTextColor)
+
+                    if isFilterActive {
+                        Text("filtered")
+                            .font(.system(size: 11, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor.opacity(0.6))
+                    }
+                }
+
+                Spacer()
+
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    showReviewSession = true
+                }) {
                     HStack(spacing: 6) {
-                        Text("Ready for review")
-                            .font(.system(.subheadline, design: .serif))
-                            .foregroundStyle(Color.secondaryTextColor)
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 10))
+                        Text("Start")
+                            .font(.system(.subheadline, design: .serif, weight: .medium))
+                    }
+                    .foregroundStyle(Color.appBackgroundColor)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.primaryTextColor)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
 
-                        if isFilterActive {
-                            Text("(filtered)")
-                                .font(.system(size: 11, design: .serif))
+            // Entry preview list
+            VStack(spacing: 1) {
+                ForEach(Array(reviewableEntries.enumerated()), id: \.element.id) { index, entry in
+                    HStack(spacing: 12) {
+                        // Index number
+                        Text("\(index + 1)")
+                            .font(.system(size: 13, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                            .frame(width: 20, alignment: .trailing)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(entry.content)
+                                .font(.system(size: 15, design: .serif))
+                                .foregroundStyle(Color.primaryTextColor)
+                                .lineLimit(1)
+
+                            Text(entry.date.relativeDay)
+                                .font(.system(size: 12, design: .serif))
                                 .foregroundStyle(Color.secondaryTextColor.opacity(0.6))
                         }
+
+                        Spacer()
                     }
-
-                    Text("\(reviewableEntries.count)")
-                        .font(.system(size: 56, weight: .medium, design: .serif))
-                        .foregroundStyle(Color.primaryTextColor)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(Color.inputBackgroundColor)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Status message
-                HStack(spacing: 8) {
-                    Image(systemName: statusIcon)
-                        .font(.system(size: 12))
-                    Text(statusMessage)
-                        .font(.system(size: 13, design: .serif))
-                }
-                .foregroundStyle(Color.secondaryTextColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(20)
-            .background(Color.inputBackgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 16)
+            .onAppear {
+                // Track first time seeing review with due items
+                if !OnboardingProgressService.shared.hasSeenFirstReview {
+                    OnboardingProgressService.shared.reach(.firstReviewSeen)
+                }
+            }
             .coachMark(
                 .reviewDue,
-                title: "Spaced Repetition",
-                message: "Review learnings at optimal intervals to move them into long-term memory.",
+                title: "Time to review",
+                message: "Read each learning and rate how well you know it. The app spaces out reviews so you remember long-term.",
                 arrowDirection: .up
             )
+        }
+    }
 
-            // Start button
-            Button(action: { showReviewSession = true }) {
-                HStack(spacing: 8) {
-                    if reviewableEntries.count > 0 {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 12))
-                    }
-                    Text(reviewableEntries.isEmpty ? "No Reviews Due" : "Start Review Session")
+    // MARK: - Caught Up Section
+
+    private var caughtUpSection: some View {
+        VStack(spacing: 16) {
+            Spacer()
+                .frame(height: 60)
+
+            if hasAnyReflections {
+                // Legitimately caught up — has entries in the pipeline but none due
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 48))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.3))
+
+                Text("All caught up")
+                    .font(.system(.title3, design: .serif, weight: .medium))
+                    .foregroundStyle(Color.primaryTextColor)
+
+                if let next = nextReviewDate {
+                    Text("Next review \(next.relativeDay)")
+                        .font(.system(.subheadline, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
                 }
-                .font(.system(.body, design: .serif, weight: .medium))
-                .foregroundStyle(reviewableEntries.isEmpty ? Color.secondaryTextColor : Color.appBackgroundColor)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(reviewableEntries.isEmpty ? Color.dividerColor : Color.primaryTextColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                // Nothing in the review pipeline yet
+                Image(systemName: "text.bubble")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.3))
+
+                Text("No learnings in review")
+                    .font(.system(.title3, design: .serif, weight: .medium))
+                    .foregroundStyle(Color.primaryTextColor)
+
+                Text("Add a reflection to any learning\nto start spaced review.")
+                    .font(.system(.subheadline, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
             }
-            .buttonStyle(.plain)
-            .disabled(reviewableEntries.isEmpty)
-        }
-    }
-
-    private var statusIcon: String {
-        if reviewableEntries.count > 0 {
-            return "sparkles"
-        } else if let next = nextReviewDate {
-            return Calendar.current.isDateInToday(next) ? "clock" : "calendar"
-        } else {
-            return "checkmark.circle"
-        }
-    }
-
-    private var statusMessage: String {
-        if reviewableEntries.count > 0 {
-            let plural = reviewableEntries.count == 1 ? "learning is" : "learnings are"
-            return "\(reviewableEntries.count) \(plural) ready to reinforce"
-        } else if let next = nextReviewDate {
-            if Calendar.current.isDateInToday(next) {
-                return "Next review later today"
-            } else if Calendar.current.isDateInTomorrow(next) {
-                return "Next review tomorrow"
-            } else if let days = Calendar.current.dateComponents([.day], from: Date(), to: next).day {
-                return "Next review in \(days) days"
-            }
-        }
-        return "All caught up!"
-    }
-
-    // MARK: - Stats Section
-
-    private var statsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Progress")
-                .font(.system(.subheadline, design: .serif, weight: .medium))
-                .foregroundStyle(Color.secondaryTextColor)
-
-            // 3 stats in a row
-            HStack(spacing: 12) {
-                statCard(value: "\(allEntries.count)", label: "Total")
-                statCard(value: "\(totalReviewed)", label: "Reviewed")
-                statCard(value: "\(graduatedCount)", label: "Graduated")
-            }
-        }
-    }
-
-    private func statCard(value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.system(.title2, design: .serif, weight: .medium))
-                .foregroundStyle(Color.primaryTextColor)
-
-            Text(label)
-                .font(.system(size: 11, design: .serif))
-                .foregroundStyle(Color.secondaryTextColor)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(Color.inputBackgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
     }
+}
 
-    // MARK: - Science Note
+// MARK: - Date Relative Day
 
-    private var scienceNote: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 12))
-                Text("Based on neuroscience")
-                    .font(.system(size: 12, weight: .medium, design: .serif))
-            }
-            .foregroundStyle(Color.secondaryTextColor)
+private extension Date {
+    var relativeDay: String {
+        let calendar = Calendar.current
+        let now = Date()
 
-            Text("Spaced reviews optimize long-term retention. After \(SettingsService.shared.graduationThreshold) successful reviews, learnings graduate.")
-                .font(.system(size: 13, design: .serif))
-                .foregroundStyle(Color.secondaryTextColor.opacity(0.8))
-                .lineSpacing(2)
+        if calendar.isDateInToday(self) {
+            return "today"
+        } else if calendar.isDateInYesterday(self) {
+            return "yesterday"
+        } else if calendar.isDateInTomorrow(self) {
+            return "tomorrow"
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.inputBackgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+        let components = calendar.dateComponents([.day], from: self.startOfDay, to: now.startOfDay)
+        if let days = components.day, days > 0 {
+            return "\(days) days ago"
+        }
+
+        let futureComponents = calendar.dateComponents([.day], from: now.startOfDay, to: self.startOfDay)
+        if let days = futureComponents.day, days > 0 {
+            return "in \(days) days"
+        }
+
+        return self.formattedShort
     }
 }
 

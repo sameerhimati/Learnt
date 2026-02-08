@@ -11,32 +11,37 @@ struct TodayView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Query private var allEntries: [LearningEntry]
 
-    // Use SceneStorage to persist selected date across tab switches
     @SceneStorage("selectedDate") private var selectedDateTimestamp: Double = Date().timeIntervalSince1970
     @State private var hasAppearedOnce = false
-
-    private var selectedDate: Date {
-        get { Date(timeIntervalSince1970: selectedDateTimestamp) }
-    }
-
-    private func setSelectedDate(_ date: Date) {
-        selectedDateTimestamp = date.timeIntervalSince1970
-    }
     @State private var showCalendar = false
     @State private var showAddLearning = false
     @State private var editingEntry: LearningEntry?
     @State private var reflectingEntry: LearningEntry?
     @State private var entryToDelete: LearningEntry?
     @State private var isQuoteHidden = QuoteService.shared.isQuoteHidden
-    @State private var showLibrary = false
     @State private var dailyQuotesEnabled = SettingsService.shared.dailyQuotesEnabled
     @State private var expandedCardId: UUID? = nil
+    @State private var inlineEntryText = ""
+    @State private var keyboardHeight: CGFloat = 0
+
+    // Onboarding nudge state
+    @State private var showReflectNudge = false
+    @State private var showReviewStartedNudge = false
 
     private let quoteService = QuoteService.shared
     private var settings: SettingsService { SettingsService.shared }
+    private var onboarding: OnboardingProgressService { OnboardingProgressService.shared }
 
     private var entryStore: EntryStore {
         EntryStore(modelContext: modelContext)
+    }
+
+    private var selectedDate: Date {
+        Date(timeIntervalSince1970: selectedDateTimestamp)
+    }
+
+    private func setSelectedDate(_ date: Date) {
+        selectedDateTimestamp = date.timeIntervalSince1970
     }
 
     private var entriesForSelectedDate: [LearningEntry] {
@@ -48,93 +53,74 @@ struct TodayView: View {
         !selectedDate.isSameDay(as: Date()) && selectedDate < Date()
     }
 
+    private var entryBarPlaceholder: String {
+        selectedDate.isToday ? "What did you learn?" : "What did you learn on \(selectedDate.formattedShort)?"
+    }
+
+    private var isKeyboardVisible: Bool {
+        keyboardHeight > 0
+    }
+
+    // No auto-focus — keyboard on launch is jarring
+
     var body: some View {
         ZStack {
             Color.appBackgroundColor
                 .ignoresSafeArea()
+                .onTapGesture { dismissKeyboard() }
 
             VStack(spacing: 0) {
-                // Header with arrow navigation
                 headerView
 
                 Divider()
                     .background(Color.dividerColor)
 
-                // Content
+                // Content area
                 if entriesForSelectedDate.isEmpty {
-                    VStack(spacing: 0) {
-                        // Quote of the day (only on today, when enabled and not hidden)
-                        if selectedDate.isToday && dailyQuotesEnabled && !isQuoteHidden {
-                            QuoteCard(
-                                quote: quoteService.quoteOfTheDay,
-                                onAddToEntry: { quoteText in
-                                    entryStore.createEntry(content: quoteText, for: selectedDate)
-                                },
-                                onHide: {
-                                    withAnimation(.easeOut(duration: 0.2)) {
-                                        quoteService.hideQuoteForToday()
-                                        isQuoteHidden = true
-                                    }
-                                }
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
-                        }
-
-                        EmptyStateView(
-                            isToday: selectedDate.isToday,
-                            onAdd: { showAddLearning = true }
-                        )
-                    }
+                    emptyContent
+                        .onTapGesture { dismissKeyboard() }
                 } else {
                     entriesListView
                 }
             }
-            .coachMark(
-                .navigateDays,
-                title: "Browse Your History",
-                message: "Swipe left or right to see previous days, or tap the calendar icon.",
-                arrowDirection: .none
-            )
 
-            // Floating buttons (bottom) - hide when card is expanded
-            if expandedCardId == nil {
-                VStack {
-                    Spacer()
-                    HStack {
-                        // Library button (bottom-left)
-                        Button(action: { showLibrary = true }) {
-                            Image(systemName: "books.vertical")
-                                .font(.system(size: 20))
-                                .foregroundStyle(Color.primaryTextColor)
-                                .frame(width: 56, height: 56)
-                                .background(Color.appBackgroundColor)
-                                .clipShape(Circle())
-                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+            // Floating entry bar overlay — ignores bottom safe area
+            // so keyboardHeight (measured from screen bottom) maps correctly
+            VStack {
+                Spacer()
+                InlineEntryBar(
+                    text: $inlineEntryText,
+                    placeholder: entryBarPlaceholder,
+                    onSend: {
+                        let trimmed = inlineEntryText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmed.isEmpty else { return }
+                        entryStore.createEntry(content: trimmed, for: selectedDate)
+                        inlineEntryText = ""
+
+                        // Track first entry milestone
+                        if !onboarding.hasCreatedFirstEntry {
+                            onboarding.reach(.firstEntry)
+                            // Show reflect nudge after a short delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    showReflectNudge = true
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .padding(.leading, 24)
 
-                        Spacer()
-
-                        // Add button (bottom-right)
-                        Button(action: { showAddLearning = true }) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundStyle(Color.primaryTextColor)
-                                .frame(width: 56, height: 56)
-                                .background(Color.appBackgroundColor)
-                                .clipShape(Circle())
-                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                        // Clear first session flag after first entry
+                        if onboarding.isFirstSession {
+                            onboarding.isFirstSession = false
                         }
-                        .buttonStyle(.plain)
-                        .padding(.trailing, 24)
-                    }
-                    .padding(.bottom, 80) // Above tab bar
-                }
+                    },
+                    onMicTap: { showAddLearning = true },
+                    onExpand: { showAddLearning = true }
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, isKeyboardVisible ? keyboardHeight + 8 : 110)
             }
+            .ignoresSafeArea(edges: .bottom)
         }
-        .gesture(swipeGesture)
         .sheet(isPresented: $showCalendar) {
             CalendarOverlay(
                 selectedDate: selectedDate,
@@ -156,9 +142,20 @@ struct TodayView: View {
                         entry.transcription = transcription
                         if reflection != nil {
                             entryStore.updateReflection(entry, reflection: reflection)
+                            trackFirstReflection()
                         }
                     }
                     showAddLearning = false
+
+                    // Track first entry milestone
+                    if !onboarding.hasCreatedFirstEntry {
+                        onboarding.reach(.firstEntry)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                showReflectNudge = true
+                            }
+                        }
+                    }
                 },
                 onCancel: { showAddLearning = false }
             )
@@ -171,6 +168,7 @@ struct TodayView: View {
                     entry.contentAudioFileName = audioFileName
                     entry.transcription = transcription
                     entryStore.updateReflection(entry, reflection: reflection)
+                    if reflection != nil { trackFirstReflection() }
                     editingEntry = nil
                 },
                 onCancel: { editingEntry = nil },
@@ -189,6 +187,7 @@ struct TodayView: View {
                     entry.contentAudioFileName = audioFileName
                     entry.transcription = transcription
                     entryStore.updateReflection(entry, reflection: reflection)
+                    if reflection != nil { trackFirstReflection() }
                     reflectingEntry = nil
                 },
                 onCancel: { reflectingEntry = nil },
@@ -215,33 +214,40 @@ struct TodayView: View {
         } message: {
             Text("This learning will be permanently deleted.")
         }
-        .sheet(isPresented: $showLibrary) {
-            LibraryView()
-        }
         .onAppear {
-            // Always sync with settings in case they changed while on another tab
             dailyQuotesEnabled = SettingsService.shared.dailyQuotesEnabled
             isQuoteHidden = quoteService.isQuoteHidden
 
-            // On first appear (cold launch), always reset to today
             if !hasAppearedOnce {
                 hasAppearedOnce = true
                 setSelectedDate(Date().startOfDay)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .jumpToToday)) { _ in
-            // When user taps Today tab while already on Today, jump to today's date
             navigateTo(Date())
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
+            guard let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+            let screenHeight = UIScreen.main.bounds.height
+            let newHeight = max(0, screenHeight - frame.origin.y)
+
+            // Use the keyboard's own animation duration for proper tracking
+            if let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double, duration > 0 {
+                withAnimation(.easeOut(duration: duration)) {
+                    keyboardHeight = newHeight
+                }
+            } else {
+                // Interactive dismiss — no animation, track instantly
+                keyboardHeight = newHeight
+            }
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
             if newPhase == .active {
-                // Reset to today if app has been inactive for 1+ hour or on cold launch
                 if settings.shouldResetToToday {
                     setSelectedDate(Date().startOfDay)
                 }
             }
             if newPhase == .background {
-                // Track when app goes to background
                 settings.lastActiveTime = Date()
             }
         }
@@ -250,59 +256,107 @@ struct TodayView: View {
     // MARK: - Header
 
     private var headerView: some View {
-        HStack {
-            // Navigation arrows + date (tap date to return to today)
-            HStack(spacing: 8) {
-                Button(action: { navigateTo(selectedDate.yesterday) }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
-                .buttonStyle(.plain)
-
-                // Tap date to return to today
-                Button(action: { navigateTo(Date()) }) {
-                    Text(selectedDate.formattedFull)
-                        .font(.system(.title2, design: .serif))
-                        .foregroundStyle(Color.primaryTextColor)
-                }
-                .buttonStyle(.plain)
-
-                Button(action: { navigateTo(selectedDate.tomorrow) }) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(canGoForward ? Color.secondaryTextColor : Color.secondaryTextColor.opacity(0.3))
-                }
-                .buttonStyle(.plain)
-                .disabled(!canGoForward)
+        HStack(spacing: 0) {
+            // Back arrow
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                navigateTo(selectedDate.yesterday)
+            }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.primaryTextColor)
+                    .frame(width: 40, height: 44)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+
+            // Date
+            Button(action: { showCalendar = true }) {
+                Text(selectedDate.formattedFull)
+                    .font(.system(.title3, design: .serif))
+                    .foregroundStyle(Color.primaryTextColor)
+                    .lineLimit(1)
+            }
+            .buttonStyle(.plain)
+
+            // Forward arrow
+            Button(action: {
+                if canGoForward {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    navigateTo(selectedDate.tomorrow)
+                }
+            }) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(canGoForward ? Color.primaryTextColor : Color.secondaryTextColor.opacity(0.3))
+                    .frame(width: 40, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!canGoForward)
 
             Spacer()
 
-            // "Today" button when viewing a past date
+            // "← Today" button when viewing a past date
             if !selectedDate.isToday {
                 Button(action: { navigateTo(Date()) }) {
-                    Text("Today")
-                        .font(.system(size: 13, weight: .medium, design: .serif))
-                        .foregroundStyle(Color.primaryTextColor)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.inputBackgroundColor)
-                        .clipShape(Capsule())
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.left")
+                            .font(.system(size: 11, weight: .medium))
+                        Text("Today")
+                            .font(.system(size: 13, weight: .medium, design: .serif))
+                    }
+                    .foregroundStyle(Color.primaryTextColor)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.inputBackgroundColor)
+                    .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
 
-            // Calendar only
+            // Calendar
             Button(action: { showCalendar = true }) {
                 Image(systemName: "calendar")
-                    .font(.system(size: 20))
+                    .font(.system(size: 18))
                     .foregroundStyle(Color.primaryTextColor)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.leading, 8)
+        .padding(.trailing, 4)
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Empty Content
+
+    private var emptyContent: some View {
+        VStack(spacing: 0) {
+            if selectedDate.isToday && dailyQuotesEnabled && !isQuoteHidden {
+                QuoteCard(
+                    quote: quoteService.quoteOfTheDay,
+                    onHide: {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            quoteService.hideQuoteForToday()
+                            isQuoteHidden = true
+                        }
+                    }
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+            }
+
+            EmptyStateView(
+                isToday: selectedDate.isToday,
+                date: selectedDate,
+                totalEntryCount: allEntries.count,
+                onAdd: { showAddLearning = true }
+            )
+        }
+        // Keep empty state above the floating entry bar
+        .padding(.bottom, isKeyboardVisible ? keyboardHeight + 40 : 130)
     }
 
     // MARK: - Entries List
@@ -310,13 +364,22 @@ struct TodayView: View {
     private var entriesListView: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                // Quote of the day (only on today, when enabled and not hidden)
+                // Review started nudge (shown after first reflection)
+                if showReviewStartedNudge {
+                    InlineNudgeCard(
+                        title: "Review started",
+                        message: "This learning will come back for review tomorrow. Check the Review tab when it's ready.",
+                        onDismiss: {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                showReviewStartedNudge = false
+                            }
+                        }
+                    )
+                }
+
                 if selectedDate.isToday && settings.dailyQuotesEnabled && !isQuoteHidden {
                     QuoteCard(
                         quote: quoteService.quoteOfTheDay,
-                        onAddToEntry: { quoteText in
-                            entryStore.createEntry(content: quoteText, for: selectedDate)
-                        },
                         onHide: {
                             withAnimation(.easeOut(duration: 0.2)) {
                                 quoteService.hideQuoteForToday()
@@ -333,6 +396,7 @@ struct TodayView: View {
                         onAddReflection: { reflectingEntry = entry },
                         onDelete: { entryToDelete = entry },
                         onToggleFavorite: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             entry.isFavorite.toggle()
                             entry.updatedAt = Date()
                         },
@@ -340,59 +404,56 @@ struct TodayView: View {
                             expandedCardId = isExpanded ? entry.id : nil
                         }
                     )
-                    .modifier(FirstCardCoachMark(isFirstCard: index == 0))
+                }
+
+                // Reflect nudge (shown after first entry, before first reflection)
+                if showReflectNudge {
+                    InlineNudgeCard(
+                        title: "Reflect to remember",
+                        message: "Tap \"Reflect on this\" on your learning to deepen understanding and start spaced review.",
+                        onDismiss: {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                showReflectNudge = false
+                            }
+                        }
+                    )
                 }
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
-            .padding(.bottom, 80) // Space for tab bar
+            .padding(.bottom, isKeyboardVisible ? keyboardHeight + 80 : 160)
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 
-    // MARK: - Navigation
-
-    private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 50)
-            .onEnded { value in
-                let horizontal = value.translation.width
-
-                if horizontal > 0 {
-                    // Swipe right = go back in time
-                    navigateTo(selectedDate.yesterday)
-                } else if horizontal < 0 && canGoForward {
-                    // Swipe left = go forward (only if not at today)
-                    navigateTo(selectedDate.tomorrow)
-                }
-            }
-    }
+    // MARK: - Helpers
 
     private func navigateTo(_ date: Date) {
-        // Don't allow navigating to future
         guard !date.isFuture else { return }
-
+        dismissKeyboard()
         withAnimation(.easeInOut(duration: 0.2)) {
             setSelectedDate(date.startOfDay)
         }
     }
 
-}
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
 
-// MARK: - First Card Coach Mark
-
-private struct FirstCardCoachMark: ViewModifier {
-    let isFirstCard: Bool
-
-    func body(content: Content) -> some View {
-        if isFirstCard {
-            content
-                .coachMark(
-                    .expandCard,
-                    title: "Tap to Expand",
-                    message: "Tap any card to see details, edit, add reflections, or share.",
-                    arrowDirection: .down
-                )
-        } else {
-            content
+    private func trackFirstReflection() {
+        if !onboarding.hasAddedFirstReflection {
+            onboarding.reach(.firstReflection)
+            // Hide reflect nudge and show review started nudge
+            withAnimation(.easeOut(duration: 0.3)) {
+                showReflectNudge = false
+                showReviewStartedNudge = true
+            }
+            // Auto-dismiss review started nudge after 8 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    showReviewStartedNudge = false
+                }
+            }
         }
     }
 }
