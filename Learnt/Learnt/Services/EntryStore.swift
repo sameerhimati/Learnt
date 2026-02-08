@@ -190,37 +190,6 @@ final class EntryStore {
 
         entry.updatedAt = Date()
         save()
-
-        // Update review streak
-        updateReviewStreak()
-    }
-
-    /// Update review streak based on review activity
-    private func updateReviewStreak() {
-        let settings = SettingsService.shared
-        let today = Date().startOfDay
-
-        if let lastReview = settings.lastReviewDate?.startOfDay {
-            if lastReview == today {
-                // Already reviewed today, no change to streak
-            } else if lastReview == today.yesterday.startOfDay {
-                // Consecutive day, increment streak
-                settings.reviewStreak += 1
-            } else {
-                // Missed days, reset streak
-                settings.reviewStreak = 1
-            }
-        } else {
-            // First review ever
-            settings.reviewStreak = 1
-        }
-
-        settings.lastReviewDate = today
-
-        // Update longest streak if current is higher
-        if settings.reviewStreak > settings.longestReviewStreak {
-            settings.longestReviewStreak = settings.reviewStreak
-        }
     }
 
     // MARK: - Delete

@@ -16,8 +16,6 @@ struct ReviewView: View {
     @State private var includeGraduated = false
     @State private var showFilterSheet = false
 
-    private var settings: SettingsService { SettingsService.shared }
-
     private var entryStore: EntryStore {
         EntryStore(modelContext: modelContext)
     }
@@ -76,11 +74,6 @@ struct ReviewView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 24) {
-                            // Streak badge (if active)
-                            if settings.reviewStreak > 0 {
-                                streakBadge
-                            }
-
                             // Ready for review section
                             reviewReadySection
 
@@ -159,22 +152,6 @@ struct ReviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 32)
-    }
-
-    // MARK: - Streak Badge
-
-    private var streakBadge: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "flame")
-                .font(.system(size: 16))
-            Text("\(settings.reviewStreak)-day streak")
-                .font(.system(.subheadline, design: .serif, weight: .medium))
-        }
-        .foregroundStyle(Color.primaryTextColor)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color.inputBackgroundColor)
-        .clipShape(Capsule())
     }
 
     // MARK: - Review Ready Section

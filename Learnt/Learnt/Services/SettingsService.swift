@@ -19,9 +19,6 @@ final class SettingsService {
         static let reviewReminderEnabled = "reviewReminderEnabled"
         static let reviewReminderTime = "reviewReminderTime"
         static let notificationPermissionRequested = "notificationPermissionRequested"
-        static let reviewStreak = "reviewStreak"
-        static let lastReviewDate = "lastReviewDate"
-        static let longestReviewStreak = "longestReviewStreak"
         static let graduationThreshold = "graduationThreshold"
         static let monthlyWrappedEnabled = "monthlyWrappedEnabled"
         static let lastWrappedPromptMonth = "lastWrappedPromptMonth"
@@ -182,23 +179,6 @@ final class SettingsService {
     var notificationPermissionRequested: Bool {
         get { UserDefaults.standard.bool(forKey: Keys.notificationPermissionRequested) }
         set { UserDefaults.standard.set(newValue, forKey: Keys.notificationPermissionRequested) }
-    }
-
-    // MARK: - Review Streak
-
-    var reviewStreak: Int {
-        get { UserDefaults.standard.integer(forKey: Keys.reviewStreak) }
-        set { UserDefaults.standard.set(newValue, forKey: Keys.reviewStreak) }
-    }
-
-    var lastReviewDate: Date? {
-        get { UserDefaults.standard.object(forKey: Keys.lastReviewDate) as? Date }
-        set { UserDefaults.standard.set(newValue, forKey: Keys.lastReviewDate) }
-    }
-
-    var longestReviewStreak: Int {
-        get { UserDefaults.standard.integer(forKey: Keys.longestReviewStreak) }
-        set { UserDefaults.standard.set(newValue, forKey: Keys.longestReviewStreak) }
     }
 
     // MARK: - Review Graduation

@@ -11,7 +11,6 @@ struct ProfileView: View {
     @Query private var entries: [LearningEntry]
     @State private var showClearDataAlert = false
     @State private var showWrapped = false
-    @State private var showStreakShare = false
     @State private var showLibrary = false
     @State private var showGraduationPicker = false
     @State private var showAppearancePicker = false
@@ -51,7 +50,7 @@ struct ProfileView: View {
             case .graduated:
                 return "Learnings that have completed the full review cycle. These are now stored in long-term memory and won't appear in your review queue."
             case .reflected:
-                return "Learnings where you've added reflection prompts (how to apply, what surprised you, simplified explanation, or questions raised)."
+                return "Learnings where you've added a personal reflection. Reflecting deepens understanding and retention."
             }
         }
     }
@@ -67,33 +66,6 @@ struct ProfileView: View {
 
     private var totalDays: Int {
         Set(entries.map { $0.date.startOfDay }).count
-    }
-
-    private var currentStreak: Int {
-        guard !entries.isEmpty else { return 0 }
-
-        let datesWithEntries = Set(entries.map { $0.date.startOfDay })
-        var streak = 0
-        var checkDate = Date().startOfDay
-
-        if datesWithEntries.contains(checkDate) {
-            streak = 1
-            checkDate = checkDate.yesterday.startOfDay
-        } else {
-            checkDate = checkDate.yesterday.startOfDay
-            if !datesWithEntries.contains(checkDate) {
-                return 0
-            }
-            streak = 1
-            checkDate = checkDate.yesterday.startOfDay
-        }
-
-        while datesWithEntries.contains(checkDate) {
-            streak += 1
-            checkDate = checkDate.yesterday.startOfDay
-        }
-
-        return streak
     }
 
     private var reviewedCount: Int {
@@ -122,29 +94,6 @@ struct ProfileView: View {
         case 2: return "2 reminders"
         default: return "On"
         }
-    }
-
-    private var longestStreak: Int {
-        guard !entries.isEmpty else { return 0 }
-
-        let datesWithEntries = Set(entries.map { $0.date.startOfDay }).sorted()
-        guard let firstDate = datesWithEntries.first else { return 0 }
-
-        var longest = 1
-        var current = 1
-        var previousDate = firstDate
-
-        for date in datesWithEntries.dropFirst() {
-            if Calendar.current.isDate(date, inSameDayAs: previousDate.tomorrow) {
-                current += 1
-                longest = max(longest, current)
-            } else {
-                current = 1
-            }
-            previousDate = date
-        }
-
-        return longest
     }
 
     private var topCategories: [(name: String, icon: String, count: Int)] {
@@ -198,7 +147,7 @@ struct ProfileView: View {
             totalLearnings: currentMonthEntries.count,
             totalDays: Set(currentMonthEntries.map { $0.date.startOfDay }).count,
             topCategories: topCategories,
-            longestStreak: longestStreak,
+            longestStreak: 0,
             aiSummary: storedSummary
         )
     }
@@ -384,9 +333,6 @@ struct ProfileView: View {
                     }
                 )
             }
-            .sheet(isPresented: $showStreakShare) {
-                StreakShareSheet(streakDays: currentStreak, totalLearnings: totalEntries)
-            }
             .sheet(isPresented: $showLibrary) {
                 LibraryView()
             }
@@ -451,25 +397,6 @@ struct ProfileView: View {
                 }
                 .buttonStyle(.plain)
 
-                // Share Streak button
-                Button(action: { showStreakShare = true }) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "flame")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.primaryTextColor)
-
-                        Text("Streak")
-                            .font(.system(size: 12, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.inputBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-                .disabled(currentStreak == 0)
-                .opacity(currentStreak == 0 ? 0.5 : 1)
             }
             .coachMark(
                 .yourMonth,
@@ -484,7 +411,6 @@ struct ProfileView: View {
 
     private var mainStatsSection: some View {
         HStack(spacing: 12) {
-            statCard(value: "\(currentStreak)", label: "Day Streak", icon: "flame")
             statCard(value: "\(totalEntries)", label: "Learnings", icon: "lightbulb")
             statCard(value: "\(totalDays)", label: "Days", icon: "calendar")
         }
