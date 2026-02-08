@@ -10,7 +10,6 @@ struct ProfileView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var entries: [LearningEntry]
     @State private var showClearDataAlert = false
-    @State private var showWrapped = false
     @State private var showLibrary = false
     @State private var showGraduationPicker = false
     @State private var showAppearancePicker = false
@@ -96,192 +95,6 @@ struct ProfileView: View {
         }
     }
 
-    private var topCategories: [(name: String, icon: String, count: Int)] {
-        var categoryCount: [String: (icon: String, count: Int)] = [:]
-
-        for entry in entries {
-            for category in entry.categories {
-                if let existing = categoryCount[category.name] {
-                    categoryCount[category.name] = (category.icon, existing.count + 1)
-                } else {
-                    categoryCount[category.name] = (category.icon, 1)
-                }
-            }
-        }
-
-        return categoryCount
-            .map { (name: $0.key, icon: $0.value.icon, count: $0.value.count) }
-            .sorted { $0.count > $1.count }
-    }
-
-    private var mostActiveDay: String {
-        guard !entries.isEmpty else { return "Monday" }
-
-        let calendar = Calendar.current
-        var dayCount: [Int: Int] = [:]  // weekday: count
-
-        for entry in entries {
-            let weekday = calendar.component(.weekday, from: entry.date)
-            dayCount[weekday, default: 0] += 1
-        }
-
-        // Find the day with the most entries
-        let mostActive = dayCount.max(by: { $0.value < $1.value })?.key ?? 1
-
-        // Convert weekday number to name (1=Sunday, 2=Monday, etc.)
-        let formatter = DateFormatter()
-        return formatter.weekdaySymbols[mostActive - 1]
-    }
-
-    private var currentMonthData: WrappedData {
-        let monthFormatter = DateFormatter()
-        monthFormatter.dateFormat = "MMMM yyyy"
-
-        // Load stored summary if available
-        let monthKey = settings.monthKey(from: Date())
-        let storedSummary = settings.getAISummary(for: monthKey)
-
-        return WrappedData(
-            period: monthFormatter.string(from: Date()),
-            monthDate: Date(),
-            totalLearnings: currentMonthEntries.count,
-            totalDays: Set(currentMonthEntries.map { $0.date.startOfDay }).count,
-            topCategories: topCategories,
-            longestStreak: 0,
-            aiSummary: storedSummary
-        )
-    }
-
-    private var currentMonthEntries: [LearningEntry] {
-        let calendar = Calendar.current
-        let month = calendar.component(.month, from: Date())
-        let year = calendar.component(.year, from: Date())
-
-        return entries.filter { entry in
-            let entryMonth = calendar.component(.month, from: entry.date)
-            let entryYear = calendar.component(.year, from: entry.date)
-            return entryMonth == month && entryYear == year
-        }
-    }
-
-    private var pastMonthsData: [WrappedData] {
-        var pastMonths: [WrappedData] = []
-        let calendar = Calendar.current
-        let monthFormatter = DateFormatter()
-        monthFormatter.dateFormat = "MMMM yyyy"
-
-        for monthOffset in 1...6 {
-            guard let monthDate = calendar.date(byAdding: .month, value: -monthOffset, to: Date()) else { continue }
-
-            let month = calendar.component(.month, from: monthDate)
-            let year = calendar.component(.year, from: monthDate)
-
-            let monthEntries = entries.filter { entry in
-                let entryMonth = calendar.component(.month, from: entry.date)
-                let entryYear = calendar.component(.year, from: entry.date)
-                return entryMonth == month && entryYear == year
-            }
-
-            if !monthEntries.isEmpty {
-                let datesWithEntries = Set(monthEntries.map { $0.date.startOfDay }).sorted()
-                var longest = 1
-                var current = 1
-                if let firstDate = datesWithEntries.first {
-                    var previousDate = firstDate
-                    for date in datesWithEntries.dropFirst() {
-                        if calendar.isDate(date, inSameDayAs: previousDate.tomorrow) {
-                            current += 1
-                            longest = max(longest, current)
-                        } else {
-                            current = 1
-                        }
-                        previousDate = date
-                    }
-                }
-
-                var categoryCount: [String: (icon: String, count: Int)] = [:]
-                for entry in monthEntries {
-                    for category in entry.categories {
-                        if let existing = categoryCount[category.name] {
-                            categoryCount[category.name] = (category.icon, existing.count + 1)
-                        } else {
-                            categoryCount[category.name] = (category.icon, 1)
-                        }
-                    }
-                }
-                let topCats = categoryCount
-                    .map { (name: $0.key, icon: $0.value.icon, count: $0.value.count) }
-                    .sorted { $0.count > $1.count }
-
-                pastMonths.append(WrappedData(
-                    period: monthFormatter.string(from: monthDate),
-                    monthDate: monthDate,
-                    totalLearnings: monthEntries.count,
-                    totalDays: datesWithEntries.count,
-                    topCategories: topCats,
-                    longestStreak: longest
-                ))
-            }
-        }
-
-        return pastMonths
-    }
-
-    // MARK: - AI Summary
-
-    private func generateAISummary(for monthDate: Date, completion: @escaping (String) -> Void) {
-        let calendar = Calendar.current
-        let month = calendar.component(.month, from: monthDate)
-        let year = calendar.component(.year, from: monthDate)
-
-        let monthEntries = entries.filter { entry in
-            let entryMonth = calendar.component(.month, from: entry.date)
-            let entryYear = calendar.component(.year, from: entry.date)
-            return entryMonth == month && entryYear == year
-        }
-
-        // Don't generate if no entries - let the UI show the placeholder
-        guard !monthEntries.isEmpty else {
-            return
-        }
-
-        let monthFormatter = DateFormatter()
-        monthFormatter.dateFormat = "MMMM yyyy"
-        let period = monthFormatter.string(from: monthDate)
-
-        // Build top categories for this month
-        var categoryCount: [String: Int] = [:]
-        for entry in monthEntries {
-            for category in entry.categories {
-                categoryCount[category.name, default: 0] += 1
-            }
-        }
-        let topCats = categoryCount
-            .map { (name: $0.key, count: $0.value) }
-            .sorted { $0.count > $1.count }
-
-        Task {
-            // Check if AI is available on this device
-            if AIService.shared.isAvailable {
-                // Use real AI
-                let result = await AIService.shared.generateMonthlySummary(
-                    entries: monthEntries,
-                    period: period,
-                    topCategories: topCats
-                )
-                await MainActor.run {
-                    completion(result?.summary ?? AIService.shared.fallbackSummary(count: monthEntries.count, period: period).summary)
-                }
-            } else {
-                // Use fallback when AI is unavailable
-                let fallback = AIService.shared.fallbackSummary(count: monthEntries.count, period: period)
-                await MainActor.run {
-                    completion(fallback.summary)
-                }
-            }
-        }
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -323,16 +136,6 @@ struct ProfileView: View {
             } message: {
                 Text("Feature tips have been reset. You'll see them again as you navigate the app.")
             }
-            .fullScreenCover(isPresented: $showWrapped) {
-                WrappedView(
-                    currentMonth: currentMonthData,
-                    pastMonths: pastMonthsData,
-                    onShare: {},
-                    onGenerateSummary: { monthDate, completion in
-                        generateAISummary(for: monthDate, completion: completion)
-                    }
-                )
-            }
             .sheet(isPresented: $showLibrary) {
                 LibraryView()
             }
@@ -352,59 +155,36 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Share Section
+    // MARK: - Library Section
 
     private var shareSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Share & Browse")
-                .font(.system(.subheadline, design: .serif, weight: .medium))
-                .foregroundStyle(Color.secondaryTextColor)
-
+        Button(action: { showLibrary = true }) {
             HStack(spacing: 12) {
-                // Library button
-                Button(action: { showLibrary = true }) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "books.vertical")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.primaryTextColor)
+                Image(systemName: "books.vertical")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.secondaryTextColor)
+                    .frame(width: 24)
 
-                        Text("Library")
-                            .font(.system(size: 12, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.inputBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Library")
+                        .font(.system(.body, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
+                    Text("Browse all your learnings")
+                        .font(.system(.caption, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
                 }
-                .buttonStyle(.plain)
 
-                // Your Month button
-                Button(action: { showWrapped = true }) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.primaryTextColor)
+                Spacer()
 
-                        Text("Your Month")
-                            .font(.system(size: 12, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.inputBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.secondaryTextColor)
             }
-            .coachMark(
-                .yourMonth,
-                title: "Your Month",
-                message: "View your monthly learning summary with stats and insights.",
-                arrowDirection: .up
-            )
+            .padding(16)
+            .background(Color.inputBackgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Main Stats

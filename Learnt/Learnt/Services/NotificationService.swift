@@ -18,7 +18,6 @@ final class NotificationService {
     private enum Identifiers {
         static let captureReminder = "learnt.capture.reminder"
         static let reviewReminder = "learnt.review.reminder"
-        static let monthlyWrapped = "learnt.monthly.wrapped"
     }
 
     // MARK: - Authorization Status
@@ -64,9 +63,6 @@ final class NotificationService {
                 await scheduleReviewReminder()
             }
 
-            if settings.monthlyWrappedEnabled {
-                await scheduleMonthlyWrapped()
-            }
         }
     }
 
@@ -123,36 +119,6 @@ final class NotificationService {
             try await center.add(request)
         } catch {
             print("Failed to schedule review reminder: \(error)")
-        }
-    }
-
-    private func scheduleMonthlyWrapped() async {
-        let content = UNMutableNotificationContent()
-        content.title = "Your Month in Learning"
-        content.body = "Your monthly learning wrapped is ready! See your progress and insights."
-        content.sound = .default
-
-        // Schedule for the 1st of each month at 10:00 AM
-        var components = DateComponents()
-        components.day = 1
-        components.hour = 10
-        components.minute = 0
-
-        let trigger = UNCalendarNotificationTrigger(
-            dateMatching: components,
-            repeats: true
-        )
-
-        let request = UNNotificationRequest(
-            identifier: Identifiers.monthlyWrapped,
-            content: content,
-            trigger: trigger
-        )
-
-        do {
-            try await center.add(request)
-        } catch {
-            print("Failed to schedule monthly wrapped reminder: \(error)")
         }
     }
 
