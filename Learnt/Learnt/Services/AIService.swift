@@ -14,13 +14,6 @@ import FoundationModels
 
 // MARK: - Result Types
 
-struct ReflectionPromptsResult {
-    var applicationPrompt: String
-    var surprisePrompt: String
-    var simplificationPrompt: String
-    var questionPrompt: String
-}
-
 struct MonthlySummaryResult {
     var summary: String
     var standoutInsight: String
@@ -112,76 +105,6 @@ final class AIService {
             print("AI category suggestion failed: \(error)")
             return []
         }
-    }
-    #endif
-
-    // MARK: - Reflection Prompts
-
-    func generateReflectionPrompts(for content: String) async -> ReflectionPromptsResult? {
-        guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-
-        #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            return await generateReflectionPromptsWithAI(for: content)
-        }
-        #endif
-        return nil
-    }
-
-    #if canImport(FoundationModels)
-    @available(iOS 26.0, *)
-    private func generateReflectionPromptsWithAI(for content: String) async -> ReflectionPromptsResult? {
-        guard case .available = SystemLanguageModel.default.availability else { return nil }
-
-        let prompt = """
-        Generate 4 personalized reflection prompts for this learning entry.
-        Keep each prompt concise (under 15 words).
-
-        Learning: "\(content)"
-
-        Format as:
-        Application: [prompt about applying this]
-        Surprise: [prompt about what was unexpected]
-        Simplify: [prompt about explaining simply]
-        Question: [prompt about exploring further]
-        """
-
-        do {
-            let session = LanguageModelSession()
-            let response = try await session.respond(to: prompt)
-            return parseReflectionPrompts(from: response.content)
-        } catch {
-            print("AI reflection prompts failed: \(error)")
-            return nil
-        }
-    }
-
-    @available(iOS 26.0, *)
-    private func parseReflectionPrompts(from text: String) -> ReflectionPromptsResult {
-        var application = "How might you use this insight tomorrow?"
-        var surprise = "What aspect of this challenged your assumptions?"
-        var simplify = "How would you explain this to a friend?"
-        var question = "What would you like to explore further?"
-
-        let lines = text.components(separatedBy: "\n")
-        for line in lines {
-            if line.lowercased().hasPrefix("application:") {
-                application = String(line.dropFirst(12)).trimmingCharacters(in: .whitespaces)
-            } else if line.lowercased().hasPrefix("surprise:") {
-                surprise = String(line.dropFirst(9)).trimmingCharacters(in: .whitespaces)
-            } else if line.lowercased().hasPrefix("simplify:") {
-                simplify = String(line.dropFirst(9)).trimmingCharacters(in: .whitespaces)
-            } else if line.lowercased().hasPrefix("question:") {
-                question = String(line.dropFirst(9)).trimmingCharacters(in: .whitespaces)
-            }
-        }
-
-        return ReflectionPromptsResult(
-            applicationPrompt: application,
-            surprisePrompt: surprise,
-            simplificationPrompt: simplify,
-            questionPrompt: question
-        )
     }
     #endif
 
@@ -328,15 +251,6 @@ extension AIService {
         }
 
         return Array(suggestions.prefix(2))
-    }
-
-    static func mockReflectionPrompts(for content: String) -> ReflectionPromptsResult {
-        ReflectionPromptsResult(
-            applicationPrompt: "How might you use this insight tomorrow?",
-            surprisePrompt: "What aspect of this challenged your assumptions?",
-            simplificationPrompt: "How would you explain this to a friend?",
-            questionPrompt: "What would you like to explore further?"
-        )
     }
 
     static func mockMonthlySummary(count: Int, period: String, topCategories: [(name: String, count: Int)] = []) -> MonthlySummaryResult {

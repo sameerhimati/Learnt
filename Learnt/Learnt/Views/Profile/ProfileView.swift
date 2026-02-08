@@ -105,7 +105,7 @@ struct ProfileView: View {
     }
 
     private var reflectionCount: Int {
-        entries.filter { $0.hasReflections }.count
+        entries.filter { $0.hasReflection }.count
     }
 
     private var graduatedCount: Int {

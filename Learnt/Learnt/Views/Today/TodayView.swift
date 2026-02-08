@@ -150,14 +150,14 @@ struct TodayView: View {
         }
         .sheet(isPresented: $showAddLearning) {
             AddLearningView(
-                onSave: { content, app, sur, sim, que, categories, audioFileName, transcription in
+                onSave: { content, reflection, categories, audioFileName, transcription in
                     entryStore.createEntry(content: content, for: selectedDate)
                     if let entry = entryStore.entries(for: selectedDate).last {
                         entry.categories = categories
                         entry.contentAudioFileName = audioFileName
                         entry.transcription = transcription
-                        if app != nil || sur != nil || sim != nil || que != nil {
-                            entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
+                        if reflection != nil {
+                            entryStore.updateReflection(entry, reflection: reflection)
                         }
                     }
                     showAddLearning = false
@@ -167,20 +167,17 @@ struct TodayView: View {
         }
         .sheet(item: $editingEntry) { entry in
             AddLearningView(
-                onSave: { content, app, sur, sim, que, categories, audioFileName, transcription in
+                onSave: { content, reflection, categories, audioFileName, transcription in
                     entryStore.updateEntry(entry, content: content)
                     entry.categories = categories
                     entry.contentAudioFileName = audioFileName
                     entry.transcription = transcription
-                    entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
+                    entryStore.updateReflection(entry, reflection: reflection)
                     editingEntry = nil
                 },
                 onCancel: { editingEntry = nil },
                 initialContent: entry.content,
-                initialApplication: entry.application,
-                initialSurprise: entry.surprise,
-                initialSimplification: entry.simplification,
-                initialQuestion: entry.question,
+                initialReflection: entry.reflection,
                 initialCategories: entry.categories,
                 initialContentAudioFileName: entry.contentAudioFileName,
                 initialTranscription: entry.transcription
@@ -188,20 +185,17 @@ struct TodayView: View {
         }
         .sheet(item: $reflectingEntry) { entry in
             AddLearningView(
-                onSave: { content, app, sur, sim, que, categories, audioFileName, transcription in
+                onSave: { content, reflection, categories, audioFileName, transcription in
                     entryStore.updateEntry(entry, content: content)
                     entry.categories = categories
                     entry.contentAudioFileName = audioFileName
                     entry.transcription = transcription
-                    entryStore.updateReflections(entry, application: app, surprise: sur, simplification: sim, question: que)
+                    entryStore.updateReflection(entry, reflection: reflection)
                     reflectingEntry = nil
                 },
                 onCancel: { reflectingEntry = nil },
                 initialContent: entry.content,
-                initialApplication: entry.application,
-                initialSurprise: entry.surprise,
-                initialSimplification: entry.simplification,
-                initialQuestion: entry.question,
+                initialReflection: entry.reflection,
                 initialCategories: entry.categories,
                 initialContentAudioFileName: entry.contentAudioFileName,
                 initialTranscription: entry.transcription

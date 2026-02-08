@@ -559,13 +559,10 @@ struct LibraryEntryDetailView: View {
         }
         .sheet(isPresented: $showEditSheet) {
             AddLearningView(
-                onSave: { content, application, surprise, simplification, question, categories, audioFileName, transcription in
+                onSave: { content, reflection, categories, audioFileName, transcription in
                     updateEntry(
                         content: content,
-                        application: application,
-                        surprise: surprise,
-                        simplification: simplification,
-                        question: question,
+                        reflection: reflection,
                         categories: categories,
                         audioFileName: audioFileName,
                         transcription: transcription
@@ -574,10 +571,7 @@ struct LibraryEntryDetailView: View {
                 },
                 onCancel: { showEditSheet = false },
                 initialContent: entry.content,
-                initialApplication: entry.application,
-                initialSurprise: entry.surprise,
-                initialSimplification: entry.simplification,
-                initialQuestion: entry.question,
+                initialReflection: entry.reflection,
                 initialCategories: entry.categories,
                 initialContentAudioFileName: entry.contentAudioFileName,
                 initialTranscription: entry.transcription
@@ -664,30 +658,21 @@ struct LibraryEntryDetailView: View {
                 }
             }
 
-            // Reflections
-            if entry.hasReflections {
+            // Reflection
+            if let reflection = entry.reflection {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Reflections")
+                    Text("Reflection")
                         .font(.system(.subheadline, design: .serif, weight: .medium))
                         .foregroundStyle(Color.secondaryTextColor)
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        if let app = entry.application {
-                            reflectionRow(icon: "lightbulb", label: "Apply", content: app)
-                        }
-                        if let sur = entry.surprise {
-                            reflectionRow(icon: "exclamationmark.circle", label: "Surprised", content: sur)
-                        }
-                        if let sim = entry.simplification {
-                            reflectionRow(icon: "text.quote", label: "Simply", content: sim)
-                        }
-                        if let que = entry.question {
-                            reflectionRow(icon: "questionmark.circle", label: "Question", content: que)
-                        }
-                    }
-                    .padding(16)
-                    .background(Color.inputBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    Text(reflection)
+                        .font(.system(size: 14, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
+                        .lineSpacing(2)
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.inputBackgroundColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
 
@@ -737,42 +722,17 @@ struct LibraryEntryDetailView: View {
         }
     }
 
-    private func reflectionRow(icon: String, label: String, content: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(Color.secondaryTextColor)
-                .frame(width: 16)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 11, weight: .medium, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
-
-                Text(content)
-                    .font(.system(size: 14, design: .serif))
-                    .foregroundStyle(Color.primaryTextColor)
-            }
-        }
-    }
-
     // MARK: - Actions
 
     private func updateEntry(
         content: String,
-        application: String?,
-        surprise: String?,
-        simplification: String?,
-        question: String?,
+        reflection: String?,
         categories: [Category],
         audioFileName: String?,
         transcription: String?
     ) {
         entry.content = content
-        entry.application = application
-        entry.surprise = surprise
-        entry.simplification = simplification
-        entry.question = question
+        entry.reflection = reflection
         entry.categories = categories
         entry.contentAudioFileName = audioFileName
         entry.transcription = transcription

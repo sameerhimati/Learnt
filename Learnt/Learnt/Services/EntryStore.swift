@@ -95,21 +95,11 @@ final class EntryStore {
         save()
     }
 
-    func updateReflections(
-        _ entry: LearningEntry,
-        application: String? = nil,
-        surprise: String? = nil,
-        simplification: String? = nil,
-        question: String? = nil
-    ) {
-        entry.application = application
-        entry.surprise = surprise
-        entry.simplification = simplification
-        entry.question = question
+    func updateReflection(_ entry: LearningEntry, reflection: String?) {
+        entry.reflection = reflection
 
         // Start the spaced repetition timer on first reflection
-        let hasNewReflections = application != nil || surprise != nil || simplification != nil || question != nil
-        if entry.firstReflectionDate == nil && hasNewReflections {
+        if entry.firstReflectionDate == nil && reflection != nil {
             entry.firstReflectionDate = Date()
             // Schedule first review for tomorrow
             entry.nextReviewDate = Calendar.current.date(byAdding: .day, value: 1, to: Date())

@@ -15,11 +15,8 @@ final class LearningEntry {
     var updatedAt: Date
     var sortOrder: Int
 
-    // Reflection prompts (all optional)
-    var application: String?      // "How could you apply this?"
-    var surprise: String?         // "What surprised you?"
-    var simplification: String?   // "Explain it simply"
-    var question: String?         // "What question does this raise?"
+    // Free-text reflection (optional)
+    var reflection: String?
 
     // Spaced repetition
     var nextReviewDate: Date?
@@ -32,10 +29,7 @@ final class LearningEntry {
 
     // Voice memo audio file paths (stored as file names in Documents)
     var contentAudioFileName: String?
-    var applicationAudioFileName: String?
-    var surpriseAudioFileName: String?
-    var simplificationAudioFileName: String?
-    var questionAudioFileName: String?
+    var reflectionAudioFileName: String?
 
     // Optional transcription of voice content
     var transcription: String?
@@ -58,11 +52,8 @@ final class LearningEntry {
         self.updatedAt = Date()
         self.sortOrder = sortOrder
 
-        // Reflection fields default to nil
-        self.application = nil
-        self.surprise = nil
-        self.simplification = nil
-        self.question = nil
+        // Reflection defaults to nil
+        self.reflection = nil
 
         // Spaced repetition defaults - timer starts on first reflection, not creation
         self.nextReviewDate = nil
@@ -89,12 +80,8 @@ extension LearningEntry {
 
     // MARK: - Reflection Helpers
 
-    var hasReflections: Bool {
-        application != nil || surprise != nil || simplification != nil || question != nil
-    }
-
-    var reflectionCount: Int {
-        [application, surprise, simplification, question].compactMap { $0 }.count
+    var hasReflection: Bool {
+        reflection != nil
     }
 
     // MARK: - Review Helpers
@@ -115,10 +102,7 @@ extension LearningEntry {
 
     var hasAnyAudio: Bool {
         contentAudioFileName != nil ||
-        applicationAudioFileName != nil ||
-        surpriseAudioFileName != nil ||
-        simplificationAudioFileName != nil ||
-        questionAudioFileName != nil
+        reflectionAudioFileName != nil
     }
 
     private static var documentsDirectory: URL {
@@ -131,8 +115,5 @@ extension LearningEntry {
     }
 
     var contentAudioURL: URL? { audioURL(for: contentAudioFileName) }
-    var applicationAudioURL: URL? { audioURL(for: applicationAudioFileName) }
-    var surpriseAudioURL: URL? { audioURL(for: surpriseAudioFileName) }
-    var simplificationAudioURL: URL? { audioURL(for: simplificationAudioFileName) }
-    var questionAudioURL: URL? { audioURL(for: questionAudioFileName) }
+    var reflectionAudioURL: URL? { audioURL(for: reflectionAudioFileName) }
 }

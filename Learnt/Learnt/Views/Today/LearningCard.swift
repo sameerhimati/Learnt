@@ -74,10 +74,10 @@ struct LearningCard: View {
                         .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
                     }
 
-                    if entry.hasReflections {
+                    if entry.hasReflection {
                         Text("·")
                             .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
-                        Text("\(entry.reflectionCount) reflection\(entry.reflectionCount == 1 ? "" : "s")")
+                        Text("reflected")
                             .font(.system(size: 11, design: .serif))
                             .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
                     }
@@ -127,9 +127,18 @@ struct LearningCard: View {
                 }
             }
 
-            // Existing reflections
-            if entry.hasReflections {
-                reflectionsSection
+            // Existing reflection
+            if let reflection = entry.reflection {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Reflection")
+                        .font(.system(size: 11, weight: .medium, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    Text(reflection)
+                        .font(.system(size: 14, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
+                        .lineSpacing(2)
+                }
             }
 
             // Action buttons
@@ -138,7 +147,7 @@ struct LearningCard: View {
                     HStack(spacing: 6) {
                         Image(systemName: "plus")
                             .font(.system(size: 12, weight: .medium))
-                        Text(entry.hasReflections ? "Add more" : "Add reflection")
+                        Text(entry.hasReflection ? "Edit reflection" : "Add reflection")
                             .font(.system(size: 13, design: .serif))
                     }
                     .foregroundStyle(Color.secondaryTextColor)
@@ -181,63 +190,6 @@ struct LearningCard: View {
         }
     }
 
-    // MARK: - Reflections Section
-
-    private var reflectionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let application = entry.application {
-                reflectionRow(
-                    icon: "lightbulb",
-                    label: "Apply",
-                    content: application
-                )
-            }
-
-            if let surprise = entry.surprise {
-                reflectionRow(
-                    icon: "exclamationmark.circle",
-                    label: "Surprised",
-                    content: surprise
-                )
-            }
-
-            if let simplification = entry.simplification {
-                reflectionRow(
-                    icon: "text.quote",
-                    label: "Simply",
-                    content: simplification
-                )
-            }
-
-            if let question = entry.question {
-                reflectionRow(
-                    icon: "questionmark.circle",
-                    label: "Question",
-                    content: question
-                )
-            }
-        }
-    }
-
-    private func reflectionRow(icon: String, label: String, content: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(Color.secondaryTextColor)
-                .frame(width: 16)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 11, weight: .medium, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
-
-                Text(content)
-                    .font(.system(size: 14, design: .serif))
-                    .foregroundStyle(Color.primaryTextColor)
-                    .lineSpacing(2)
-            }
-        }
-    }
 }
 
 #Preview {
@@ -256,14 +208,13 @@ struct LearningCard: View {
                 onToggleFavorite: {}
             )
 
-            // Entry with reflections
+            // Entry with reflection
             LearningCard(
                 entry: {
                     let entry = LearningEntry(
                         content: "Today I learned about SwiftUI animations and how they can make the user interface feel more responsive and polished."
                     )
-                    entry.application = "Use spring animations in the next feature I build"
-                    entry.question = "How do animations affect app performance?"
+                    entry.reflection = "Could use spring animations in my next feature build. Wonder about performance impact."
                     return entry
                 }(),
                 onEdit: {},
