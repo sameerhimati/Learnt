@@ -19,10 +19,6 @@ struct LibraryView: View {
     @State private var selectedCategory: Category?
     @State private var selectedEntry: LearningEntry?
 
-    // Bulk selection state
-    @State private var isSelectionMode = false
-    @State private var selectedEntries: Set<UUID> = []
-    @State private var showBulkReviewSheet = false
 
     enum LibraryFilter: String, CaseIterable {
         case all = "All"
@@ -88,59 +84,38 @@ struct LibraryView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Search bar
-                        searchBar
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Search bar
+                    searchBar
 
-                        // Filter chips
-                        filterChips
+                    // Filter chips
+                    filterChips
 
-                        // Date filter chips
-                        dateFilterChips
+                    // Date filter chips
+                    dateFilterChips
 
-                        // Category chips (if any)
-                        if !categoriesWithCounts.isEmpty {
-                            categoryChips
-                        }
-
-                        // Entries list
-                        if filteredEntries.isEmpty {
-                            emptyState
-                        } else {
-                            entriesList
-                        }
+                    // Category chips (if any)
+                    if !categoriesWithCounts.isEmpty {
+                        categoryChips
                     }
-                    .padding(16)
-                    .padding(.bottom, isSelectionMode && !selectedEntries.isEmpty ? 80 : 0)
-                }
-                .background(Color.appBackgroundColor)
 
-                // Bulk action bar
-                if isSelectionMode && !selectedEntries.isEmpty {
-                    bulkActionBar
+                    // Entries list
+                    if filteredEntries.isEmpty {
+                        emptyState
+                    } else {
+                        entriesList
+                    }
                 }
+                .padding(16)
             }
+            .background(Color.appBackgroundColor)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { toggleSelectionMode() }) {
-                        Text(isSelectionMode ? "Done" : "Select")
-                            .font(.system(.subheadline, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                    }
-                }
                 ToolbarItem(placement: .principal) {
-                    if isSelectionMode && !selectedEntries.isEmpty {
-                        Text("\(selectedEntries.count) selected")
-                            .font(.system(.subheadline, design: .serif, weight: .medium))
-                            .foregroundStyle(Color.primaryTextColor)
-                    } else {
-                        Text("Library")
-                            .font(.system(.subheadline, design: .serif, weight: .medium))
-                            .foregroundStyle(Color.primaryTextColor)
-                    }
+                    Text("Library")
+                        .font(.system(.subheadline, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.primaryTextColor)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { dismiss() }) {
@@ -153,16 +128,6 @@ struct LibraryView: View {
             }
             .sheet(item: $selectedEntry) { entry in
                 LibraryEntryDetailView(entry: entry)
-            }
-            .fullScreenCover(isPresented: $showBulkReviewSheet) {
-                ReviewSessionView(
-                    entries: selectedEntriesForReview,
-                    onComplete: {
-                        showBulkReviewSheet = false
-                        selectedEntries.removeAll()
-                        isSelectionMode = false
-                    }
-                )
             }
         }
     }
@@ -322,18 +287,8 @@ struct LibraryView: View {
     private var entriesList: some View {
         VStack(spacing: 0) {
             ForEach(Array(filteredEntries.enumerated()), id: \.element.id) { index, entry in
-                Button(action: {
-                    if isSelectionMode {
-                        toggleSelection(entry)
-                    } else {
-                        selectedEntry = entry
-                    }
-                }) {
-                    LibraryEntryRow(
-                        entry: entry,
-                        isSelectionMode: isSelectionMode,
-                        isSelected: selectedEntries.contains(entry.id)
-                    )
+                Button(action: { selectedEntry = entry }) {
+                    LibraryEntryRow(entry: entry)
                 }
                 .buttonStyle(.plain)
 
@@ -347,99 +302,15 @@ struct LibraryView: View {
         .background(Color.inputBackgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
-
-    // MARK: - Bulk Action Bar
-
-    private var bulkActionBar: some View {
-        HStack(spacing: 16) {
-            // Review button
-            Button(action: { showBulkReviewSheet = true }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "brain.head.profile")
-                        .font(.system(size: 14))
-                    Text("Review")
-                        .font(.system(.subheadline, design: .serif, weight: .medium))
-                }
-                .foregroundStyle(Color.appBackgroundColor)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.primaryTextColor)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-
-            // Favorite toggle button
-            Button(action: { bulkToggleFavorite() }) {
-                HStack(spacing: 6) {
-                    Image(systemName: allSelectedAreFavorited ? "heart.slash" : "heart")
-                        .font(.system(size: 14))
-                    Text(allSelectedAreFavorited ? "Unfavorite" : "Favorite")
-                        .font(.system(.subheadline, design: .serif, weight: .medium))
-                }
-                .foregroundStyle(Color.primaryTextColor)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.inputBackgroundColor)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .background(Color.appBackgroundColor)
-    }
-
-    // MARK: - Helper Methods
-
-    private var allSelectedAreFavorited: Bool {
-        let selectedItems = filteredEntries.filter { selectedEntries.contains($0.id) }
-        return !selectedItems.isEmpty && selectedItems.allSatisfy { $0.isFavorite }
-    }
-
-    private var selectedEntriesForReview: [LearningEntry] {
-        filteredEntries.filter { selectedEntries.contains($0.id) }
-    }
-
-    private func toggleSelectionMode() {
-        isSelectionMode.toggle()
-        if !isSelectionMode {
-            selectedEntries.removeAll()
-        }
-    }
-
-    private func toggleSelection(_ entry: LearningEntry) {
-        if selectedEntries.contains(entry.id) {
-            selectedEntries.remove(entry.id)
-        } else {
-            selectedEntries.insert(entry.id)
-        }
-    }
-
-    private func bulkToggleFavorite() {
-        let targetValue = !allSelectedAreFavorited
-        for entry in filteredEntries where selectedEntries.contains(entry.id) {
-            entry.isFavorite = targetValue
-        }
-        try? modelContext.save()
-    }
 }
 
 // MARK: - Entry Row
 
 struct LibraryEntryRow: View {
     let entry: LearningEntry
-    var isSelectionMode: Bool = false
-    var isSelected: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
-            // Selection checkbox
-            if isSelectionMode {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
-                    .foregroundStyle(isSelected ? Color.primaryTextColor : Color.secondaryTextColor)
-            }
-
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.previewText)
                     .font(.system(.body, design: .serif))
@@ -461,18 +332,16 @@ struct LibraryEntryRow: View {
 
             Spacer()
 
-            if !isSelectionMode {
-                if entry.isFavorite {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.primaryTextColor)
-                }
+            if entry.isFavorite {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primaryTextColor)
+            }
 
-                if entry.isGraduated {
-                    Image(systemName: "checkmark.seal")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
+            if entry.isGraduated {
+                Image(systemName: "checkmark.seal")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.secondaryTextColor)
             }
         }
         .padding(.horizontal, 16)
