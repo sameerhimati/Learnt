@@ -3,151 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learnt - Capture What You Learn</title>
+    <title>Learnt - Remember What You Learn</title>
+    <meta name="description" content="A minimal iOS app for capturing daily learnings with voice or text. Spaced repetition keeps them in memory. 100% private, on-device.">
+    <link rel="icon" type="image/png" href="images/learnt-icon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Playfair Display', 'Georgia', 'serif'],
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        page: '#FAFAFA',
+                        section: '#F2F2F2',
+                        primary: '#1A1A1A',
+                        secondary: '#6B6B6B',
+                        border: '#E8E8E8',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Times New Roman', Georgia, serif;
-            background-color: #FAFAFA;
-            color: #1A1A1A;
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 60px 24px;
-        }
-        h1 {
-            font-size: 48px;
-            font-weight: 500;
-            margin-bottom: 12px;
-            letter-spacing: -1px;
-        }
-        .tagline {
-            font-size: 18px;
-            color: #6B6B6B;
-            margin-bottom: 48px;
-        }
-        h2 {
-            font-size: 24px;
-            font-weight: 500;
-            margin-top: 48px;
-            margin-bottom: 16px;
-        }
-        p {
-            margin-bottom: 16px;
-            color: #1A1A1A;
-        }
-        .features {
-            margin: 32px 0;
-        }
-        .feature {
-            padding: 16px 0;
-            border-bottom: 1px solid #E8E8E8;
-        }
-        .feature:last-child {
-            border-bottom: none;
-        }
-        .feature-title {
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-        .feature-desc {
-            color: #6B6B6B;
-            font-size: 15px;
-        }
-        .links {
-            margin-top: 48px;
-            padding-top: 24px;
-            border-top: 1px solid #E8E8E8;
-        }
-        a {
-            color: #1A1A1A;
-            text-decoration: underline;
-        }
-        a:hover {
-            color: #6B6B6B;
-        }
-        .footer {
-            margin-top: 48px;
-            color: #6B6B6B;
-            font-size: 14px;
-        }
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #1A1A1A;
-                color: #FAFAFA;
-            }
-            p {
-                color: #FAFAFA;
-            }
-            .tagline, .feature-desc, .footer {
-                color: #9B9B9B;
-            }
-            .feature {
-                border-bottom-color: #2A2A2A;
-            }
-            .links {
-                border-top-color: #2A2A2A;
-            }
-            a {
-                color: #FAFAFA;
-            }
-            a:hover {
-                color: #9B9B9B;
-            }
-        }
+        html { scroll-behavior: smooth; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>Learnt</h1>
-        <p class="tagline">Capture what you learn, one moment at a time.</p>
+<body class="bg-page text-primary font-sans antialiased">
 
-        <p>Learnt is a minimal iOS app for tracking your daily learnings. Voice or text. Simple, intentional, private.</p>
-
-        <div class="features">
-            <div class="feature">
-                <div class="feature-title">Voice or Text</div>
-                <div class="feature-desc">Capture learnings your way with instant voice transcription or quick text entry.</div>
-            </div>
-            <div class="feature">
-                <div class="feature-title">Spaced Repetition</div>
-                <div class="feature-desc">Science-backed review intervals help you retain what matters.</div>
-            </div>
-            <div class="feature">
-                <div class="feature-title">Beautiful Sharing</div>
-                <div class="feature-desc">Share your learnings as elegant visual cards.</div>
-            </div>
-            <div class="feature">
-                <div class="feature-title">100% Private</div>
-                <div class="feature-desc">All data stays on your device. No accounts, no cloud, no tracking.</div>
+    <!-- Hero -->
+    <section class="min-h-[90vh] flex items-center">
+        <div class="max-w-5xl mx-auto px-6 py-24 w-full">
+            <div class="grid md:grid-cols-2 gap-16 items-center">
+                <div>
+                    <div class="flex items-center gap-4 mb-8">
+                        <img src="images/learnt-icon.png" alt="Learnt app icon" class="w-16 h-16 rounded-2xl shadow-md">
+                        <span class="font-serif text-lg tracking-wide text-secondary">Learnt</span>
+                    </div>
+                    <h1 class="font-serif text-5xl md:text-6xl font-medium leading-tight tracking-tight mb-6">
+                        Remember what<br>you learn.
+                    </h1>
+                    <p class="text-lg text-secondary leading-relaxed mb-8 max-w-md">
+                        A quiet place to capture daily learnings. Voice or text, reviewed at the right intervals, kept entirely on your device.
+                    </p>
+                    <a href="https://testflight.apple.com/join/YOUR_LINK"
+                       class="inline-flex items-center gap-2 bg-primary text-page px-8 py-4 rounded-2xl text-base font-medium hover:bg-secondary transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                        Join TestFlight
+                    </a>
+                    <p class="text-sm text-secondary mt-3">Free during beta. iOS 17+.</p>
+                </div>
+                <div class="flex justify-center">
+                    <!-- iPhone mockup frame -->
+                    <div class="relative w-[280px] h-[560px] bg-primary rounded-[3rem] p-3 shadow-2xl">
+                        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[30px] bg-primary rounded-b-2xl z-10"></div>
+                        <div class="w-full h-full bg-page rounded-[2.4rem] flex items-center justify-center">
+                            <div class="text-center px-8">
+                                <img src="images/learnt-icon.png" alt="Learnt" class="w-20 h-20 rounded-2xl mx-auto mb-4 opacity-40">
+                                <p class="text-sm text-secondary">Screenshot coming soon</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+    </section>
 
-        <h2>FAQ</h2>
-
-        <p><strong>Is my data private?</strong><br>
-        Yes. All your learnings are stored locally on your device. We don't collect any data.</p>
-
-        <p><strong>Does it work offline?</strong><br>
-        Yes. The app works entirely offline since everything is stored on your device.</p>
-
-        <p><strong>What are the review intervals?</strong><br>
-        Based on neuroscience research: 1, 7, 16, and 35 days. Optimized for long-term retention.</p>
-
-        <div class="links">
-            <p><a href="privacy.html">Privacy Policy</a> · <a href="support.html">Support</a></p>
+    <!-- Features -->
+    <section class="bg-section">
+        <div class="max-w-5xl mx-auto px-6 py-24">
+            <h2 class="font-serif text-3xl md:text-4xl font-medium tracking-tight text-center mb-16">Built for how you actually learn.</h2>
+            <div class="grid sm:grid-cols-2 gap-6">
+                <div class="bg-page rounded-2xl p-8">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-4">
+                        <svg class="w-5 h-5 text-page" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                    </div>
+                    <h3 class="font-serif text-xl font-medium mb-2">Capture</h3>
+                    <p class="text-secondary leading-relaxed">Voice or text, whatever feels natural. Speak a thought and it's transcribed instantly. No friction, no formatting.</p>
+                </div>
+                <div class="bg-page rounded-2xl p-8">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-4">
+                        <svg class="w-5 h-5 text-page" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    </div>
+                    <h3 class="font-serif text-xl font-medium mb-2">Reflect</h3>
+                    <p class="text-secondary leading-relaxed">Daily prompts surface past learnings at the right moments. Rewrite, refine, and deepen your understanding over time.</p>
+                </div>
+                <div class="bg-page rounded-2xl p-8">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-4">
+                        <svg class="w-5 h-5 text-page" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                    </div>
+                    <h3 class="font-serif text-xl font-medium mb-2">Remember</h3>
+                    <p class="text-secondary leading-relaxed">Spaced repetition at 1, 7, 16, and 35 days. Science-backed intervals that move knowledge into long-term memory.</p>
+                </div>
+                <div class="bg-page rounded-2xl p-8">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center mb-4">
+                        <svg class="w-5 h-5 text-page" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    </div>
+                    <h3 class="font-serif text-xl font-medium mb-2">Private</h3>
+                    <p class="text-secondary leading-relaxed">All data stays on your device. No accounts, no cloud, no tracking. Delete the app and everything is gone.</p>
+                </div>
+            </div>
         </div>
+    </section>
 
-        <div class="footer">
-            <p>&copy; 2026 Learnt. Made with care.</p>
+    <!-- How It Works -->
+    <section>
+        <div class="max-w-5xl mx-auto px-6 py-24">
+            <h2 class="font-serif text-3xl md:text-4xl font-medium tracking-tight text-center mb-16">Three steps. Every day.</h2>
+            <div class="grid md:grid-cols-3 gap-12">
+                <div class="text-center">
+                    <div class="w-14 h-14 rounded-full border-2 border-primary flex items-center justify-center mx-auto mb-6">
+                        <span class="font-serif text-xl font-medium">1</span>
+                    </div>
+                    <h3 class="font-serif text-xl font-medium mb-3">Write</h3>
+                    <p class="text-secondary leading-relaxed">Capture one thing you learned today. Voice or text — takes 10 seconds.</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-14 h-14 rounded-full border-2 border-primary flex items-center justify-center mx-auto mb-6">
+                        <span class="font-serif text-xl font-medium">2</span>
+                    </div>
+                    <h3 class="font-serif text-xl font-medium mb-3">Reflect</h3>
+                    <p class="text-secondary leading-relaxed">When a learning comes back, rewrite it in your own words. Understanding deepens.</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-14 h-14 rounded-full border-2 border-primary flex items-center justify-center mx-auto mb-6">
+                        <span class="font-serif text-xl font-medium">3</span>
+                    </div>
+                    <h3 class="font-serif text-xl font-medium mb-3">Review</h3>
+                    <p class="text-secondary leading-relaxed">Spaced intervals bring it back at 1, 7, 16, and 35 days. Then it's yours.</p>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <!-- Design Philosophy -->
+    <section class="bg-section">
+        <div class="max-w-3xl mx-auto px-6 py-24 text-center">
+            <h2 class="font-serif text-3xl md:text-4xl font-medium tracking-tight mb-8">Every element earns its place.</h2>
+            <p class="text-lg text-secondary leading-relaxed mb-6">
+                Learnt is deliberately monochrome. No bright colors competing for attention, no gamification, no streaks. Just you and what you're learning.
+            </p>
+            <p class="text-lg text-secondary leading-relaxed">
+                The interface stays out of the way so the content — your knowledge — stays front and center. It's a tool that respects your time and your thinking.
+            </p>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section>
+        <div class="max-w-3xl mx-auto px-6 py-24">
+            <h2 class="font-serif text-3xl md:text-4xl font-medium tracking-tight text-center mb-16">Questions</h2>
+            <div class="space-y-8">
+                <div class="border-b border-border pb-8">
+                    <h3 class="font-medium text-lg mb-2">Is my data private?</h3>
+                    <p class="text-secondary leading-relaxed">Yes. All your learnings are stored locally on your device. We don't collect any data — no analytics, no tracking, no cloud.</p>
+                </div>
+                <div class="border-b border-border pb-8">
+                    <h3 class="font-medium text-lg mb-2">Does it work offline?</h3>
+                    <p class="text-secondary leading-relaxed">Yes. The app works entirely offline since everything is stored on your device. Voice transcription uses Apple's on-device speech recognition.</p>
+                </div>
+                <div class="border-b border-border pb-8">
+                    <h3 class="font-medium text-lg mb-2">What are the review intervals?</h3>
+                    <p class="text-secondary leading-relaxed">Based on neuroscience research: 1, 7, 16, and 35 days after you first capture a learning. Optimized for long-term retention.</p>
+                </div>
+                <div class="border-b border-border pb-8">
+                    <h3 class="font-medium text-lg mb-2">Is it free?</h3>
+                    <p class="text-secondary leading-relaxed">Learnt is free during the beta period via TestFlight. Requires iOS 17 or later.</p>
+                </div>
+                <div>
+                    <h3 class="font-medium text-lg mb-2">How do I share what I've learned?</h3>
+                    <p class="text-secondary leading-relaxed">Tap any learning to expand it, then use the share button to create a beautiful visual card you can send anywhere.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer CTA -->
+    <section class="bg-primary text-page">
+        <div class="max-w-3xl mx-auto px-6 py-24 text-center">
+            <h2 class="font-serif text-3xl md:text-4xl font-medium tracking-tight mb-4">Start remembering.</h2>
+            <p class="text-lg opacity-70 mb-8">Join the beta and build your learning habit.</p>
+            <a href="https://testflight.apple.com/join/YOUR_LINK"
+               class="inline-flex items-center gap-2 bg-page text-primary px-8 py-4 rounded-2xl text-base font-medium hover:bg-section transition-colors">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                Join TestFlight
+            </a>
+            <div class="mt-12 flex items-center justify-center gap-6 text-sm opacity-60">
+                <a href="privacy.html" class="text-page hover:opacity-100 transition-opacity">Privacy Policy</a>
+                <span>·</span>
+                <a href="support.html" class="text-page hover:opacity-100 transition-opacity">Support</a>
+                <span>·</span>
+                <a href="mailto:sam@itamih.com" class="text-page hover:opacity-100 transition-opacity">Contact</a>
+            </div>
+            <p class="mt-8 text-sm opacity-40">&copy; 2026 Learnt. Made with care.</p>
+        </div>
+    </section>
+
 </body>
 </html>
