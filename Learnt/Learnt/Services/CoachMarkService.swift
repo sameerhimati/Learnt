@@ -20,7 +20,6 @@ final class CoachMarkService {
         case expandCard = "coachMark_expandCard"
         case navigateDays = "coachMark_navigateDays"
         case reviewDue = "coachMark_reviewDue"
-        case yourMonth = "coachMark_yourMonth"
         case reflections = "coachMark_reflections"
 
         /// Marks that must be seen before this one can show

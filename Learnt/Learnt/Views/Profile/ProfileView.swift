@@ -106,8 +106,8 @@ struct ProfileView: View {
                     // Review stats (always show, even when zero)
                     reviewStatsSection
 
-                    // Share section (always show)
-                    shareSection
+                    // Library link
+                    librarySection
 
                     Divider()
                         .background(Color.dividerColor)
@@ -157,7 +157,7 @@ struct ProfileView: View {
 
     // MARK: - Library Section
 
-    private var shareSection: some View {
+    private var librarySection: some View {
         Button(action: { showLibrary = true }) {
             HStack(spacing: 12) {
                 Image(systemName: "books.vertical")

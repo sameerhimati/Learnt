@@ -249,7 +249,6 @@ struct GlobalCoachMarkOverlay: View {
         case .expandCard: return "Tap to Expand"
         case .navigateDays: return "Browse Your History"
         case .reviewDue: return "Spaced Repetition"
-        case .yourMonth: return "Your Month"
         case .reflections: return "Add Reflections"
         }
     }
@@ -257,10 +256,9 @@ struct GlobalCoachMarkOverlay: View {
     private func messageFor(_ mark: CoachMarkService.Mark) -> String {
         switch mark {
         case .addLearning: return "Tap here to capture something you learned today. Use voice or text."
-        case .expandCard: return "Tap any card to see details, edit, add reflections, or share."
+        case .expandCard: return "Tap any card to see details, edit, or add reflections."
         case .navigateDays: return "Swipe left or right to see previous days, or tap the calendar icon."
         case .reviewDue: return "Review learnings at optimal intervals to move them into long-term memory."
-        case .yourMonth: return "View your monthly learning summary with stats and insights."
         case .reflections: return "Add notes about how to apply what you learned or questions that arose."
         }
     }
