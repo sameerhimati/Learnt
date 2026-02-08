@@ -491,7 +491,6 @@ struct LibraryEntryDetailView: View {
 
     @State private var showEditSheet = false
     @State private var showDeleteAlert = false
-    @State private var showShareSheet = false
 
     private var audioURL: URL? {
         guard let fileName = entry.contentAudioFileName else { return nil }
@@ -528,19 +527,11 @@ struct LibraryEntryDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 16) {
-                        Button(action: { showEditSheet = true }) {
-                            Image(systemName: "pencil")
-                                .font(.system(size: 16, weight: .medium))
-                                .frame(width: 28, height: 28)
-                                .foregroundStyle(Color.primaryTextColor)
-                        }
-                        Button(action: { showShareSheet = true }) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 16, weight: .medium))
-                                .frame(width: 28, height: 28)
-                                .foregroundStyle(Color.primaryTextColor)
-                        }
+                    Button(action: { showEditSheet = true }) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 16, weight: .medium))
+                            .frame(width: 28, height: 28)
+                            .foregroundStyle(Color.primaryTextColor)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -584,9 +575,6 @@ struct LibraryEntryDetailView: View {
             }
         } message: {
             Text("This will permanently delete this learning. This cannot be undone.")
-        }
-        .sheet(isPresented: $showShareSheet) {
-            ShareEntrySheet(entry: entry)
         }
     }
 

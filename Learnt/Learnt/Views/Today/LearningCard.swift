@@ -10,7 +10,6 @@ struct LearningCard: View {
     let onEdit: () -> Void
     let onAddReflection: () -> Void
     let onDelete: () -> Void
-    let onShare: () -> Void
     let onToggleFavorite: () -> Void
     var onExpansionChanged: ((Bool) -> Void)? = nil
 
@@ -164,14 +163,6 @@ struct LearningCard: View {
                 }
                 .buttonStyle(.plain)
 
-                // Share button
-                Button(action: onShare) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
-                .buttonStyle(.plain)
-
                 Button(action: onDelete) {
                     Text("Delete")
                         .font(.system(size: 13, design: .serif))
@@ -204,7 +195,6 @@ struct LearningCard: View {
                 onEdit: {},
                 onAddReflection: {},
                 onDelete: {},
-                onShare: {},
                 onToggleFavorite: {}
             )
 
@@ -220,7 +210,6 @@ struct LearningCard: View {
                 onEdit: {},
                 onAddReflection: {},
                 onDelete: {},
-                onShare: {},
                 onToggleFavorite: {}
             )
 
@@ -236,7 +225,6 @@ struct LearningCard: View {
                 onEdit: {},
                 onAddReflection: {},
                 onDelete: {},
-                onShare: {},
                 onToggleFavorite: {}
             )
         }

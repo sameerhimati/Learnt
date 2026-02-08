@@ -24,12 +24,10 @@ struct TodayView: View {
     }
     @State private var showCalendar = false
     @State private var showAddLearning = false
-    @State private var showShareSheet = false
     @State private var editingEntry: LearningEntry?
     @State private var reflectingEntry: LearningEntry?
     @State private var entryToDelete: LearningEntry?
     @State private var isQuoteHidden = QuoteService.shared.isQuoteHidden
-    @State private var entryToShare: LearningEntry?
     @State private var showLibrary = false
     @State private var dailyQuotesEnabled = SettingsService.shared.dailyQuotesEnabled
     @State private var expandedCardId: UUID? = nil
@@ -201,9 +199,6 @@ struct TodayView: View {
                 initialTranscription: entry.transcription
             )
         }
-        .sheet(isPresented: $showShareSheet) {
-            ShareSheetView(initialDate: selectedDate)
-        }
         .alert("Delete Learning?", isPresented: Binding(
             get: { entryToDelete != nil },
             set: { if !$0 { entryToDelete = nil } }
@@ -219,9 +214,6 @@ struct TodayView: View {
             }
         } message: {
             Text("This learning will be permanently deleted.")
-        }
-        .sheet(item: $entryToShare) { entry in
-            ShareEntrySheet(entry: entry)
         }
         .sheet(isPresented: $showLibrary) {
             LibraryView()
@@ -340,7 +332,6 @@ struct TodayView: View {
                         onEdit: { editingEntry = entry },
                         onAddReflection: { reflectingEntry = entry },
                         onDelete: { entryToDelete = entry },
-                        onShare: { entryToShare = entry },
                         onToggleFavorite: {
                             entry.isFavorite.toggle()
                             entry.updatedAt = Date()
