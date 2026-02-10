@@ -19,10 +19,6 @@ struct LibraryView: View {
     @State private var selectedCategory: Category?
     @State private var selectedEntry: LearningEntry?
 
-    // Bulk selection state
-    @State private var isSelectionMode = false
-    @State private var selectedEntries: Set<UUID> = []
-    @State private var showBulkReviewSheet = false
 
     enum LibraryFilter: String, CaseIterable {
         case all = "All"
@@ -88,59 +84,38 @@ struct LibraryView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Search bar
-                        searchBar
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Search bar
+                    searchBar
 
-                        // Filter chips
-                        filterChips
+                    // Filter chips
+                    filterChips
 
-                        // Date filter chips
-                        dateFilterChips
+                    // Date filter chips
+                    dateFilterChips
 
-                        // Category chips (if any)
-                        if !categoriesWithCounts.isEmpty {
-                            categoryChips
-                        }
-
-                        // Entries list
-                        if filteredEntries.isEmpty {
-                            emptyState
-                        } else {
-                            entriesList
-                        }
+                    // Category chips (if any)
+                    if !categoriesWithCounts.isEmpty {
+                        categoryChips
                     }
-                    .padding(16)
-                    .padding(.bottom, isSelectionMode && !selectedEntries.isEmpty ? 80 : 0)
-                }
-                .background(Color.appBackgroundColor)
 
-                // Bulk action bar
-                if isSelectionMode && !selectedEntries.isEmpty {
-                    bulkActionBar
+                    // Entries list
+                    if filteredEntries.isEmpty {
+                        emptyState
+                    } else {
+                        entriesList
+                    }
                 }
+                .padding(16)
             }
+            .background(Color.appBackgroundColor)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { toggleSelectionMode() }) {
-                        Text(isSelectionMode ? "Done" : "Select")
-                            .font(.system(.subheadline, design: .serif))
-                            .foregroundStyle(Color.primaryTextColor)
-                    }
-                }
                 ToolbarItem(placement: .principal) {
-                    if isSelectionMode && !selectedEntries.isEmpty {
-                        Text("\(selectedEntries.count) selected")
-                            .font(.system(.subheadline, design: .serif, weight: .medium))
-                            .foregroundStyle(Color.primaryTextColor)
-                    } else {
-                        Text("Library")
-                            .font(.system(.subheadline, design: .serif, weight: .medium))
-                            .foregroundStyle(Color.primaryTextColor)
-                    }
+                    Text("Library")
+                        .font(.system(.subheadline, design: .serif, weight: .medium))
+                        .foregroundStyle(Color.primaryTextColor)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { dismiss() }) {
@@ -153,16 +128,6 @@ struct LibraryView: View {
             }
             .sheet(item: $selectedEntry) { entry in
                 LibraryEntryDetailView(entry: entry)
-            }
-            .fullScreenCover(isPresented: $showBulkReviewSheet) {
-                ReviewSessionView(
-                    entries: selectedEntriesForReview,
-                    onComplete: {
-                        showBulkReviewSheet = false
-                        selectedEntries.removeAll()
-                        isSelectionMode = false
-                    }
-                )
             }
         }
     }
@@ -322,18 +287,8 @@ struct LibraryView: View {
     private var entriesList: some View {
         VStack(spacing: 0) {
             ForEach(Array(filteredEntries.enumerated()), id: \.element.id) { index, entry in
-                Button(action: {
-                    if isSelectionMode {
-                        toggleSelection(entry)
-                    } else {
-                        selectedEntry = entry
-                    }
-                }) {
-                    LibraryEntryRow(
-                        entry: entry,
-                        isSelectionMode: isSelectionMode,
-                        isSelected: selectedEntries.contains(entry.id)
-                    )
+                Button(action: { selectedEntry = entry }) {
+                    LibraryEntryRow(entry: entry)
                 }
                 .buttonStyle(.plain)
 
@@ -347,99 +302,15 @@ struct LibraryView: View {
         .background(Color.inputBackgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
-
-    // MARK: - Bulk Action Bar
-
-    private var bulkActionBar: some View {
-        HStack(spacing: 16) {
-            // Review button
-            Button(action: { showBulkReviewSheet = true }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "brain.head.profile")
-                        .font(.system(size: 14))
-                    Text("Review")
-                        .font(.system(.subheadline, design: .serif, weight: .medium))
-                }
-                .foregroundStyle(Color.appBackgroundColor)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.primaryTextColor)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-
-            // Favorite toggle button
-            Button(action: { bulkToggleFavorite() }) {
-                HStack(spacing: 6) {
-                    Image(systemName: allSelectedAreFavorited ? "heart.slash" : "heart")
-                        .font(.system(size: 14))
-                    Text(allSelectedAreFavorited ? "Unfavorite" : "Favorite")
-                        .font(.system(.subheadline, design: .serif, weight: .medium))
-                }
-                .foregroundStyle(Color.primaryTextColor)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.inputBackgroundColor)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .background(Color.appBackgroundColor)
-    }
-
-    // MARK: - Helper Methods
-
-    private var allSelectedAreFavorited: Bool {
-        let selectedItems = filteredEntries.filter { selectedEntries.contains($0.id) }
-        return !selectedItems.isEmpty && selectedItems.allSatisfy { $0.isFavorite }
-    }
-
-    private var selectedEntriesForReview: [LearningEntry] {
-        filteredEntries.filter { selectedEntries.contains($0.id) }
-    }
-
-    private func toggleSelectionMode() {
-        isSelectionMode.toggle()
-        if !isSelectionMode {
-            selectedEntries.removeAll()
-        }
-    }
-
-    private func toggleSelection(_ entry: LearningEntry) {
-        if selectedEntries.contains(entry.id) {
-            selectedEntries.remove(entry.id)
-        } else {
-            selectedEntries.insert(entry.id)
-        }
-    }
-
-    private func bulkToggleFavorite() {
-        let targetValue = !allSelectedAreFavorited
-        for entry in filteredEntries where selectedEntries.contains(entry.id) {
-            entry.isFavorite = targetValue
-        }
-        try? modelContext.save()
-    }
 }
 
 // MARK: - Entry Row
 
 struct LibraryEntryRow: View {
     let entry: LearningEntry
-    var isSelectionMode: Bool = false
-    var isSelected: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
-            // Selection checkbox
-            if isSelectionMode {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
-                    .foregroundStyle(isSelected ? Color.primaryTextColor : Color.secondaryTextColor)
-            }
-
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.previewText)
                     .font(.system(.body, design: .serif))
@@ -461,18 +332,16 @@ struct LibraryEntryRow: View {
 
             Spacer()
 
-            if !isSelectionMode {
-                if entry.isFavorite {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.primaryTextColor)
-                }
+            if entry.isFavorite {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.primaryTextColor)
+            }
 
-                if entry.isGraduated {
-                    Image(systemName: "checkmark.seal")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.secondaryTextColor)
-                }
+            if entry.isGraduated {
+                Image(systemName: "checkmark.seal")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.secondaryTextColor)
             }
         }
         .padding(.horizontal, 16)
@@ -491,7 +360,6 @@ struct LibraryEntryDetailView: View {
 
     @State private var showEditSheet = false
     @State private var showDeleteAlert = false
-    @State private var showShareSheet = false
 
     private var audioURL: URL? {
         guard let fileName = entry.contentAudioFileName else { return nil }
@@ -528,19 +396,11 @@ struct LibraryEntryDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 16) {
-                        Button(action: { showEditSheet = true }) {
-                            Image(systemName: "pencil")
-                                .font(.system(size: 16, weight: .medium))
-                                .frame(width: 28, height: 28)
-                                .foregroundStyle(Color.primaryTextColor)
-                        }
-                        Button(action: { showShareSheet = true }) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 16, weight: .medium))
-                                .frame(width: 28, height: 28)
-                                .foregroundStyle(Color.primaryTextColor)
-                        }
+                    Button(action: { showEditSheet = true }) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 16, weight: .medium))
+                            .frame(width: 28, height: 28)
+                            .foregroundStyle(Color.primaryTextColor)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -559,13 +419,10 @@ struct LibraryEntryDetailView: View {
         }
         .sheet(isPresented: $showEditSheet) {
             AddLearningView(
-                onSave: { content, application, surprise, simplification, question, categories, audioFileName, transcription in
+                onSave: { content, reflection, categories, audioFileName, transcription in
                     updateEntry(
                         content: content,
-                        application: application,
-                        surprise: surprise,
-                        simplification: simplification,
-                        question: question,
+                        reflection: reflection,
                         categories: categories,
                         audioFileName: audioFileName,
                         transcription: transcription
@@ -574,10 +431,7 @@ struct LibraryEntryDetailView: View {
                 },
                 onCancel: { showEditSheet = false },
                 initialContent: entry.content,
-                initialApplication: entry.application,
-                initialSurprise: entry.surprise,
-                initialSimplification: entry.simplification,
-                initialQuestion: entry.question,
+                initialReflection: entry.reflection,
                 initialCategories: entry.categories,
                 initialContentAudioFileName: entry.contentAudioFileName,
                 initialTranscription: entry.transcription
@@ -590,9 +444,6 @@ struct LibraryEntryDetailView: View {
             }
         } message: {
             Text("This will permanently delete this learning. This cannot be undone.")
-        }
-        .sheet(isPresented: $showShareSheet) {
-            ShareEntrySheet(entry: entry)
         }
     }
 
@@ -664,30 +515,21 @@ struct LibraryEntryDetailView: View {
                 }
             }
 
-            // Reflections
-            if entry.hasReflections {
+            // Reflection
+            if let reflection = entry.reflection {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Reflections")
+                    Text("Reflection")
                         .font(.system(.subheadline, design: .serif, weight: .medium))
                         .foregroundStyle(Color.secondaryTextColor)
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        if let app = entry.application {
-                            reflectionRow(icon: "lightbulb", label: "Apply", content: app)
-                        }
-                        if let sur = entry.surprise {
-                            reflectionRow(icon: "exclamationmark.circle", label: "Surprised", content: sur)
-                        }
-                        if let sim = entry.simplification {
-                            reflectionRow(icon: "text.quote", label: "Simply", content: sim)
-                        }
-                        if let que = entry.question {
-                            reflectionRow(icon: "questionmark.circle", label: "Question", content: que)
-                        }
-                    }
-                    .padding(16)
-                    .background(Color.inputBackgroundColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    Text(reflection)
+                        .font(.system(size: 14, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
+                        .lineSpacing(2)
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.inputBackgroundColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
 
@@ -737,42 +579,17 @@ struct LibraryEntryDetailView: View {
         }
     }
 
-    private func reflectionRow(icon: String, label: String, content: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(Color.secondaryTextColor)
-                .frame(width: 16)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 11, weight: .medium, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
-
-                Text(content)
-                    .font(.system(size: 14, design: .serif))
-                    .foregroundStyle(Color.primaryTextColor)
-            }
-        }
-    }
-
     // MARK: - Actions
 
     private func updateEntry(
         content: String,
-        application: String?,
-        surprise: String?,
-        simplification: String?,
-        question: String?,
+        reflection: String?,
         categories: [Category],
         audioFileName: String?,
         transcription: String?
     ) {
         entry.content = content
-        entry.application = application
-        entry.surprise = surprise
-        entry.simplification = simplification
-        entry.question = question
+        entry.reflection = reflection
         entry.categories = categories
         entry.contentAudioFileName = audioFileName
         entry.transcription = transcription

@@ -245,30 +245,22 @@ struct GlobalCoachMarkOverlay: View {
 
     private func titleFor(_ mark: CoachMarkService.Mark) -> String {
         switch mark {
-        case .addLearning: return "Add a Learning"
-        case .expandCard: return "Tap to Expand"
-        case .navigateDays: return "Browse Your History"
-        case .reviewDue: return "Spaced Repetition"
-        case .yourMonth: return "Your Month"
-        case .reflections: return "Add Reflections"
+        case .reviewDue: return "Time to review"
+        case .reflectionStartsReview: return "Review started"
         }
     }
 
     private func messageFor(_ mark: CoachMarkService.Mark) -> String {
         switch mark {
-        case .addLearning: return "Tap here to capture something you learned today. Use voice or text."
-        case .expandCard: return "Tap any card to see details, edit, add reflections, or share."
-        case .navigateDays: return "Swipe left or right to see previous days, or tap the calendar icon."
-        case .reviewDue: return "Review learnings at optimal intervals to move them into long-term memory."
-        case .yourMonth: return "View your monthly learning summary with stats and insights."
-        case .reflections: return "Add notes about how to apply what you learned or questions that arose."
+        case .reviewDue: return "Read each learning and rate how well you know it. The app spaces out reviews so you remember long-term."
+        case .reflectionStartsReview: return "Adding a reflection starts review. You'll revisit this at the right time to strengthen your memory."
         }
     }
 
     private func arrowFor(_ mark: CoachMarkService.Mark) -> CoachMarkArrowDirection {
         switch mark {
-        case .navigateDays: return .none
-        default: return .none  // Centered overlay doesn't need arrows
+        case .reviewDue: return .none
+        case .reflectionStartsReview: return .none
         }
     }
 }
@@ -306,22 +298,15 @@ extension View {
 
         VStack(spacing: 40) {
             CoachMarkView(
-                title: "Add a Learning",
-                message: "Tap here to capture something you learned today.",
-                arrowDirection: .down,
+                title: "Time to review",
+                message: "Read each learning and rate how well you know it. The app spaces out reviews so you remember long-term.",
+                arrowDirection: .none,
                 onDismiss: {}
             )
 
             CoachMarkView(
-                title: "Expand to See More",
-                message: "Tap any card to see details, add reflections, or share.",
-                arrowDirection: .up,
-                onDismiss: {}
-            )
-
-            CoachMarkView(
-                title: "Navigate Days",
-                message: "Swipe left or right to browse your past learnings.",
+                title: "Review started",
+                message: "Adding a reflection starts review. You'll revisit this at the right time.",
                 arrowDirection: .none,
                 onDismiss: {}
             )

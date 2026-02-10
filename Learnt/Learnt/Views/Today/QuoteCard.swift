@@ -6,10 +6,10 @@ import SwiftUI
 
 struct QuoteCard: View {
     let quote: Quote
-    let onAddToEntry: (String) -> Void
     let onHide: () -> Void
 
     @State private var showHistory = false
+    @State private var showCopied = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -51,13 +51,15 @@ struct QuoteCard: View {
                     }
                     .buttonStyle(.plain)
 
-                    // Add to entry button
-                    Button(action: { onAddToEntry(formatQuoteAsEntry()) }) {
+                    // Copy to clipboard
+                    Button(action: copyQuote) {
                         HStack(spacing: 4) {
-                            Image(systemName: "plus")
+                            Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
                                 .font(.system(size: 11, weight: .medium))
-                            Text("Save")
-                                .font(.system(size: 12, weight: .medium, design: .serif))
+                            if showCopied {
+                                Text("Copied")
+                                    .font(.system(size: 12, weight: .medium, design: .serif))
+                            }
                         }
                         .foregroundStyle(Color.primaryTextColor)
                     }
@@ -82,8 +84,17 @@ struct QuoteCard: View {
         }
     }
 
-    private func formatQuoteAsEntry() -> String {
-        "\"\(quote.text)\" — \(quote.author)"
+    private func copyQuote() {
+        let formatted = "\"\(quote.text)\" — \(quote.author)"
+        UIPasteboard.general.string = formatted
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showCopied = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showCopied = false
+            }
+        }
     }
 }
 
@@ -91,7 +102,6 @@ struct QuoteCard: View {
     VStack(spacing: 16) {
         QuoteCard(
             quote: Quote(text: "The obstacle is the way.", author: "Marcus Aurelius"),
-            onAddToEntry: { _ in },
             onHide: {}
         )
 
@@ -100,7 +110,6 @@ struct QuoteCard: View {
                 text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
                 author: "Aristotle"
             ),
-            onAddToEntry: { _ in },
             onHide: {}
         )
     }

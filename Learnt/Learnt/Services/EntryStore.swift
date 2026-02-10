@@ -95,21 +95,11 @@ final class EntryStore {
         save()
     }
 
-    func updateReflections(
-        _ entry: LearningEntry,
-        application: String? = nil,
-        surprise: String? = nil,
-        simplification: String? = nil,
-        question: String? = nil
-    ) {
-        entry.application = application
-        entry.surprise = surprise
-        entry.simplification = simplification
-        entry.question = question
+    func updateReflection(_ entry: LearningEntry, reflection: String?) {
+        entry.reflection = reflection
 
         // Start the spaced repetition timer on first reflection
-        let hasNewReflections = application != nil || surprise != nil || simplification != nil || question != nil
-        if entry.firstReflectionDate == nil && hasNewReflections {
+        if entry.firstReflectionDate == nil && reflection != nil {
             entry.firstReflectionDate = Date()
             // Schedule first review for tomorrow
             entry.nextReviewDate = Calendar.current.date(byAdding: .day, value: 1, to: Date())
@@ -200,37 +190,27 @@ final class EntryStore {
 
         entry.updatedAt = Date()
         save()
-
-        // Update review streak
-        updateReviewStreak()
     }
 
-    /// Update review streak based on review activity
-    private func updateReviewStreak() {
-        let settings = SettingsService.shared
-        let today = Date().startOfDay
+    /// Returns what the next interval would be if the user taps "I remember" (without recording)
+    func nextIntervalDays(for entry: LearningEntry) -> Int {
+        let threshold = SettingsService.shared.graduationThreshold
+        let nextCount = entry.reviewCount + 1
 
-        if let lastReview = settings.lastReviewDate?.startOfDay {
-            if lastReview == today {
-                // Already reviewed today, no change to streak
-            } else if lastReview == today.yesterday.startOfDay {
-                // Consecutive day, increment streak
-                settings.reviewStreak += 1
-            } else {
-                // Missed days, reset streak
-                settings.reviewStreak = 1
-            }
-        } else {
-            // First review ever
-            settings.reviewStreak = 1
+        if nextCount >= threshold {
+            return 0 // Would graduate
         }
 
-        settings.lastReviewDate = today
-
-        // Update longest streak if current is higher
-        if settings.reviewStreak > settings.longestReviewStreak {
-            settings.longestReviewStreak = settings.reviewStreak
+        let intervals: [Int]
+        switch threshold {
+        case 3:  intervals = [7, 21, 35]
+        case 4:  intervals = [7, 14, 28, 35]
+        case 5:  intervals = [5, 12, 21, 28, 35]
+        case 6:  intervals = [4, 9, 16, 23, 30, 35]
+        default: intervals = [7, 14, 28, 35]
         }
+
+        return intervals[min(nextCount - 1, intervals.count - 1)]
     }
 
     // MARK: - Delete

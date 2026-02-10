@@ -11,7 +11,7 @@ struct QuoteHistorySheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
                     // Today's quote
                     todaySection
@@ -20,8 +20,10 @@ struct QuoteHistorySheet: View {
                     previousSection
                 }
                 .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(Color.appBackgroundColor)
+            .scrollBounceBehavior(.basedOnSize)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -33,13 +35,15 @@ struct QuoteHistorySheet: View {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .medium))
-                            .frame(width: 28, height: 28)
+                            .frame(width: 32, height: 32)
                             .foregroundStyle(Color.primaryTextColor)
+                            .contentShape(Rectangle())
                     }
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
 
     // MARK: - Today Section
@@ -85,13 +89,14 @@ struct QuoteHistorySheet: View {
                 .italic()
                 .foregroundStyle(Color.primaryTextColor)
                 .lineSpacing(4)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text("— \(quote.author)")
                 .font(.system(size: 12, design: .serif))
                 .foregroundStyle(Color.secondaryTextColor)
         }
         .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.inputBackgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }

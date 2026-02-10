@@ -12,15 +12,12 @@ enum InputMode: String, CaseIterable {
 }
 
 struct AddLearningView: View {
-    let onSave: (String, String?, String?, String?, String?, [Category], String?, String?) -> Void
+    let onSave: (String, String?, [Category], String?, String?) -> Void
     let onCancel: () -> Void
 
     // For editing existing entry
     var initialContent: String = ""
-    var initialApplication: String? = nil
-    var initialSurprise: String? = nil
-    var initialSimplification: String? = nil
-    var initialQuestion: String? = nil
+    var initialReflection: String? = nil
     var initialCategories: [Category] = []
     var initialContentAudioFileName: String? = nil
     var initialTranscription: String? = nil
@@ -30,11 +27,8 @@ struct AddLearningView: View {
 
     @State private var inputMode: InputMode = .text
     @State private var content: String = ""
-    @State private var application: String = ""
-    @State private var surprise: String = ""
-    @State private var simplification: String = ""
-    @State private var question: String = ""
-    @State private var showReflections = false
+    @State private var reflection: String = ""
+    @State private var showReflection = false
     @State private var selectedCategories: [Category] = []
     @State private var contentAudioFileName: String?
     @State private var transcription: String?
@@ -42,13 +36,11 @@ struct AddLearningView: View {
     // AI features
     @State private var aiSuggestedCategoryIDs: Set<UUID> = []
     @State private var hasUserModifiedCategories = false
-    @State private var generatedPrompts: ReflectionPromptsResult?
-    @State private var isGeneratingPrompts = false
 
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case content, application, surprise, simplification, question
+        case content, reflection
     }
 
     private var isEditing: Bool {
@@ -60,8 +52,8 @@ struct AddLearningView: View {
         !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || contentAudioFileName != nil
     }
 
-    private var hasReflections: Bool {
-        !application.isEmpty || !surprise.isEmpty || !simplification.isEmpty || !question.isEmpty
+    private var hasReflection: Bool {
+        !reflection.isEmpty
     }
 
     var body: some View {
@@ -88,9 +80,9 @@ struct AddLearningView: View {
                             hasUserModifiedCategories = true
                         }
 
-                        // Reflection prompts (expandable) - text only
-                        if showReflections {
-                            reflectionPromptsSection
+                        // Optional reflection
+                        if showReflection {
+                            reflectionSection
                         } else {
                             addReflectionButton
                         }
@@ -106,14 +98,11 @@ struct AddLearningView: View {
         }
         .onAppear {
             content = initialContent
-            application = initialApplication ?? ""
-            surprise = initialSurprise ?? ""
-            simplification = initialSimplification ?? ""
-            question = initialQuestion ?? ""
+            reflection = initialReflection ?? ""
             selectedCategories = initialCategories
             contentAudioFileName = initialContentAudioFileName
             transcription = initialTranscription
-            showReflections = hasReflections
+            showReflection = hasReflection
 
             // Set initial input mode based on existing content
             if initialContentAudioFileName != nil && initialContent.isEmpty {
@@ -122,7 +111,7 @@ struct AddLearningView: View {
 
             // Only auto-focus for text mode
             if inputMode == .text {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     focusedField = .content
                 }
             }
@@ -130,12 +119,6 @@ struct AddLearningView: View {
         .onChange(of: content) { _, newValue in
             // Trigger AI category suggestions (debounced)
             suggestCategoriesDebounced(for: newValue)
-        }
-        .onChange(of: showReflections) { _, show in
-            // Generate AI reflection prompts when section is opened
-            if show && generatedPrompts == nil && !content.isEmpty {
-                generateReflectionPrompts()
-            }
         }
     }
 
@@ -187,30 +170,6 @@ struct AddLearningView: View {
                     selectedCategories = Array(suggestedCategories.prefix(2))
                 }
             }
-        }
-    }
-
-    private func generateReflectionPrompts() {
-        guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-
-        isGeneratingPrompts = true
-
-        Task {
-            #if DEBUG
-            // Use mock prompts in DEBUG
-            let prompts = AIService.mockReflectionPrompts(for: content)
-            await MainActor.run {
-                generatedPrompts = prompts
-                isGeneratingPrompts = false
-            }
-            #else
-            // Use real AI when available
-            let prompts = await AIService.shared.generateReflectionPrompts(for: content)
-            await MainActor.run {
-                generatedPrompts = prompts
-                isGeneratingPrompts = false
-            }
-            #endif
         }
     }
 
@@ -311,13 +270,13 @@ struct AddLearningView: View {
     private var addReflectionButton: some View {
         Button {
             withAnimation(.easeInOut(duration: 0.2)) {
-                showReflections = true
+                showReflection = true
             }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "plus.circle")
                     .font(.system(size: 16))
-                Text("Add reflections")
+                Text("Add a reflection")
                     .font(.system(.body, design: .serif))
             }
             .foregroundStyle(Color.secondaryTextColor)
@@ -326,26 +285,14 @@ struct AddLearningView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Reflection Prompts Section (Text Only)
+    // MARK: - Reflection Section
 
-    private var reflectionPromptsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
+    private var reflectionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                HStack(spacing: 6) {
-                    Text("Reflections")
-                        .font(.system(.subheadline, design: .serif, weight: .medium))
-                        .foregroundStyle(Color.secondaryTextColor)
-
-                    // AI indicator
-                    if generatedPrompts != nil {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 10))
-                            .foregroundStyle(Color.secondaryTextColor)
-                    } else if isGeneratingPrompts {
-                        ProgressView()
-                            .scaleEffect(0.6)
-                    }
-                }
+                Text("Reflection")
+                    .font(.system(.subheadline, design: .serif, weight: .medium))
+                    .foregroundStyle(Color.secondaryTextColor)
 
                 Spacer()
 
@@ -354,58 +301,11 @@ struct AddLearningView: View {
                     .foregroundStyle(Color.secondaryTextColor.opacity(0.6))
             }
 
-            reflectionPrompt(
-                icon: "lightbulb",
-                label: generatedPrompts?.applicationPrompt ?? "How could you apply this?",
-                text: $application,
-                field: .application
-            )
-
-            reflectionPrompt(
-                icon: "exclamationmark.circle",
-                label: generatedPrompts?.surprisePrompt ?? "What surprised you?",
-                text: $surprise,
-                field: .surprise
-            )
-
-            reflectionPrompt(
-                icon: "text.quote",
-                label: generatedPrompts?.simplificationPrompt ?? "Explain it simply",
-                text: $simplification,
-                field: .simplification
-            )
-
-            reflectionPrompt(
-                icon: "questionmark.circle",
-                label: generatedPrompts?.questionPrompt ?? "What question does this raise?",
-                text: $question,
-                field: .question
-            )
-        }
-    }
-
-    private func reflectionPrompt(
-        icon: String,
-        label: String,
-        text: Binding<String>,
-        field: Field
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.secondaryTextColor)
-
-                Text(label)
-                    .font(.system(.subheadline, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
-            }
-
-            TextField("", text: text, axis: .vertical)
+            TextField("Any thoughts on this?", text: $reflection, axis: .vertical)
                 .font(.system(.body, design: .serif))
                 .foregroundStyle(Color.primaryTextColor)
-                .focused($focusedField, equals: field)
-                .lineLimit(2...5)
+                .focused($focusedField, equals: .reflection)
+                .lineLimit(3...8)
                 .padding(12)
                 .background(Color.inputBackgroundColor)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -420,18 +320,15 @@ struct AddLearningView: View {
         // Allow saving with audio only (no text required)
         guard !trimmedContent.isEmpty || contentAudioFileName != nil else { return }
 
-        let app = application.isEmpty ? nil : application.trimmingCharacters(in: .whitespacesAndNewlines)
-        let sur = surprise.isEmpty ? nil : surprise.trimmingCharacters(in: .whitespacesAndNewlines)
-        let sim = simplification.isEmpty ? nil : simplification.trimmingCharacters(in: .whitespacesAndNewlines)
-        let que = question.isEmpty ? nil : question.trimmingCharacters(in: .whitespacesAndNewlines)
+        let ref = reflection.isEmpty ? nil : reflection.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        onSave(trimmedContent, app, sur, sim, que, selectedCategories, contentAudioFileName, transcription)
+        onSave(trimmedContent, ref, selectedCategories, contentAudioFileName, transcription)
     }
 }
 
 #Preview("New Learning") {
     AddLearningView(
-        onSave: { _, _, _, _, _, _, _, _ in },
+        onSave: { _, _, _, _, _ in },
         onCancel: {}
     )
     .modelContainer(for: [LearningEntry.self, Category.self], inMemory: true)
@@ -439,11 +336,10 @@ struct AddLearningView: View {
 
 #Preview("Edit Learning") {
     AddLearningView(
-        onSave: { _, _, _, _, _, _, _, _ in },
+        onSave: { _, _, _, _, _ in },
         onCancel: {},
         initialContent: "SwiftUI animations make interfaces feel responsive",
-        initialApplication: "Use in my next project",
-        initialQuestion: "What about performance?"
+        initialReflection: "Could use spring animations in my next project"
     )
     .modelContainer(for: [LearningEntry.self, Category.self], inMemory: true)
 }

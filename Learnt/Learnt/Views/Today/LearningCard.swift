@@ -10,7 +10,6 @@ struct LearningCard: View {
     let onEdit: () -> Void
     let onAddReflection: () -> Void
     let onDelete: () -> Void
-    let onShare: () -> Void
     let onToggleFavorite: () -> Void
     var onExpansionChanged: ((Bool) -> Void)? = nil
 
@@ -18,8 +17,46 @@ struct LearningCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Main content row
-            mainContent
+            // Tappable content area — expands/collapses card
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    isExpanded.toggle()
+                    onExpansionChanged?(isExpanded)
+                }
+            }) {
+                tappableContent
+            }
+            .buttonStyle(.plain)
+
+            // Reflection prompt (collapsed, no reflection) — separate tap target
+            if !isExpanded && !entry.hasReflection {
+                Button(action: {
+                    CoachMarkCoordinator.shared.showMark(.reflectionStartsReview)
+                    onAddReflection()
+                }) {
+                    HStack(spacing: 0) {
+                        Rectangle()
+                            .fill(Color.secondaryTextColor.opacity(0.3))
+                            .frame(width: 2)
+                            .clipShape(RoundedRectangle(cornerRadius: 1))
+
+                        Text("Reflect on this")
+                            .font(.system(size: 13, design: .serif))
+                            .foregroundStyle(Color.secondaryTextColor)
+                            .padding(.leading, 8)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                            .padding(.leading, 4)
+                    }
+                    .padding(.vertical, 6)
+                    .padding(.top, 4)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
 
             // Expanded content
             if isExpanded {
@@ -30,18 +67,11 @@ struct LearningCard: View {
         .padding(20)
         .background(Color.inputBackgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                isExpanded.toggle()
-                onExpansionChanged?(isExpanded)
-            }
-        }
     }
 
-    // MARK: - Main Content
+    // MARK: - Tappable Content (expands card)
 
-    private var mainContent: some View {
+    private var tappableContent: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 // Learning content
@@ -52,47 +82,19 @@ struct LearningCard: View {
                     .lineSpacing(5)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Meta row: time + categories + reflection count
-                HStack(spacing: 8) {
-                    Text(entry.createdAt, style: .time)
-                        .font(.system(size: 11, design: .serif))
-                        .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
-
-                    if !entry.categories.isEmpty {
-                        Text("·")
-                            .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
-                        HStack(spacing: 4) {
-                            ForEach(entry.categories.prefix(2)) { category in
-                                Image(systemName: category.icon)
-                                    .font(.system(size: 9))
-                            }
-                            if entry.categories.count > 2 {
-                                Text("+\(entry.categories.count - 2)")
-                                    .font(.system(size: 9, design: .serif))
-                            }
-                        }
-                        .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
-                    }
-
-                    if entry.hasReflections {
-                        Text("·")
-                            .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
-                        Text("\(entry.reflectionCount) reflection\(entry.reflectionCount == 1 ? "" : "s")")
-                            .font(.system(size: 11, design: .serif))
-                            .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
-                    }
-
-                    if entry.contentAudioFileName != nil {
-                        Text("·")
-                            .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
-                        Image(systemName: "waveform")
-                            .font(.system(size: 9))
-                            .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
-                    }
+                // Reflection preview (collapsed, has reflection)
+                if !isExpanded, let reflection = entry.reflection {
+                    Text(reflection)
+                        .font(.system(size: 13, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+                        .lineLimit(1)
                 }
+
+                // Meta row
+                metaRow
             }
 
-            // Favorite indicator + expand indicator
+            // Favorite indicator + expand chevron
             VStack(spacing: 8) {
                 if entry.isFavorite {
                     Image(systemName: "heart.fill")
@@ -105,19 +107,90 @@ struct LearningCard: View {
                     .rotationEffect(.degrees(isExpanded ? -180 : 0))
             }
         }
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Meta Row
+
+    private var metaRow: some View {
+        HStack(spacing: 8) {
+            Text(entry.createdAt, style: .time)
+                .font(.system(size: 11, design: .serif))
+                .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+
+            if !entry.categories.isEmpty {
+                Text("·")
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                HStack(spacing: 4) {
+                    ForEach(entry.categories.prefix(2)) { category in
+                        Image(systemName: category.icon)
+                            .font(.system(size: 9))
+                    }
+                    if entry.categories.count > 2 {
+                        Text("+\(entry.categories.count - 2)")
+                            .font(.system(size: 9, design: .serif))
+                    }
+                }
+                .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+            }
+
+            if entry.hasReflection {
+                Text("·")
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                Text("reflected")
+                    .font(.system(size: 11, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+            }
+
+            if entry.contentAudioFileName != nil {
+                Text("·")
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                Image(systemName: "waveform")
+                    .font(.system(size: 9))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+            }
+
+            // Review progress
+            if entry.isGraduated {
+                Text("·")
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                Image(systemName: "checkmark.seal")
+                    .font(.system(size: 9))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+            } else if entry.reviewCount > 0 {
+                Text("·")
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.5))
+                Text("\(entry.reviewCount)/\(SettingsService.shared.graduationThreshold)")
+                    .font(.system(size: 10, design: .serif))
+                    .foregroundStyle(Color.secondaryTextColor.opacity(0.7))
+            }
+        }
     }
 
     // MARK: - Expanded Content
 
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Divider
             Rectangle()
                 .fill(Color.dividerColor)
                 .frame(height: 1)
                 .padding(.top, 12)
 
-            // Content audio playback (if has audio)
+            // Reflection (promoted to top)
+            if let reflection = entry.reflection {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Reflection")
+                        .font(.system(size: 11, weight: .medium, design: .serif))
+                        .foregroundStyle(Color.secondaryTextColor)
+
+                    Text(reflection)
+                        .font(.system(size: 14, design: .serif))
+                        .foregroundStyle(Color.primaryTextColor)
+                        .lineSpacing(2)
+                }
+            }
+
+            // Audio
             if entry.contentAudioURL != nil {
                 HStack(spacing: 8) {
                     Text("Voice memo")
@@ -127,39 +200,29 @@ struct LearningCard: View {
                 }
             }
 
-            // Existing reflections
-            if entry.hasReflections {
-                reflectionsSection
-            }
-
-            // Action buttons
+            // Actions
             HStack(spacing: 16) {
                 Button(action: onAddReflection) {
                     HStack(spacing: 6) {
                         Image(systemName: "plus")
                             .font(.system(size: 12, weight: .medium))
-                        Text(entry.hasReflections ? "Add more" : "Add reflection")
+                        Text(entry.hasReflection ? "Edit reflection" : "Add reflection")
                             .font(.system(size: 13, design: .serif))
                     }
                     .foregroundStyle(Color.secondaryTextColor)
+                    .frame(height: 44)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
                 Spacer()
 
-                // Favorite button
                 Button(action: onToggleFavorite) {
                     Image(systemName: entry.isFavorite ? "heart.fill" : "heart")
                         .font(.system(size: 14))
                         .foregroundStyle(Color.secondaryTextColor)
-                }
-                .buttonStyle(.plain)
-
-                // Share button
-                Button(action: onShare) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.secondaryTextColor)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
@@ -167,6 +230,8 @@ struct LearningCard: View {
                     Text("Delete")
                         .font(.system(size: 13, design: .serif))
                         .foregroundStyle(Color.secondaryTextColor)
+                        .frame(height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
@@ -174,67 +239,10 @@ struct LearningCard: View {
                     Text("Edit")
                         .font(.system(size: 13, design: .serif))
                         .foregroundStyle(Color.secondaryTextColor)
+                        .frame(height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-            }
-            .padding(.trailing, 4)
-        }
-    }
-
-    // MARK: - Reflections Section
-
-    private var reflectionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let application = entry.application {
-                reflectionRow(
-                    icon: "lightbulb",
-                    label: "Apply",
-                    content: application
-                )
-            }
-
-            if let surprise = entry.surprise {
-                reflectionRow(
-                    icon: "exclamationmark.circle",
-                    label: "Surprised",
-                    content: surprise
-                )
-            }
-
-            if let simplification = entry.simplification {
-                reflectionRow(
-                    icon: "text.quote",
-                    label: "Simply",
-                    content: simplification
-                )
-            }
-
-            if let question = entry.question {
-                reflectionRow(
-                    icon: "questionmark.circle",
-                    label: "Question",
-                    content: question
-                )
-            }
-        }
-    }
-
-    private func reflectionRow(icon: String, label: String, content: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(Color.secondaryTextColor)
-                .frame(width: 16)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 11, weight: .medium, design: .serif))
-                    .foregroundStyle(Color.secondaryTextColor)
-
-                Text(content)
-                    .font(.system(size: 14, design: .serif))
-                    .foregroundStyle(Color.primaryTextColor)
-                    .lineSpacing(2)
             }
         }
     }
@@ -243,7 +251,6 @@ struct LearningCard: View {
 #Preview {
     ScrollView {
         VStack(spacing: 16) {
-            // Simple entry
             LearningCard(
                 entry: {
                     let entry = LearningEntry(content: "Short learning without reflections")
@@ -252,40 +259,20 @@ struct LearningCard: View {
                 onEdit: {},
                 onAddReflection: {},
                 onDelete: {},
-                onShare: {},
                 onToggleFavorite: {}
             )
 
-            // Entry with reflections
             LearningCard(
                 entry: {
                     let entry = LearningEntry(
                         content: "Today I learned about SwiftUI animations and how they can make the user interface feel more responsive and polished."
                     )
-                    entry.application = "Use spring animations in the next feature I build"
-                    entry.question = "How do animations affect app performance?"
+                    entry.reflection = "Could use spring animations in my next feature build."
                     return entry
                 }(),
                 onEdit: {},
                 onAddReflection: {},
                 onDelete: {},
-                onShare: {},
-                onToggleFavorite: {}
-            )
-
-            // Favorited entry
-            LearningCard(
-                entry: {
-                    let entry = LearningEntry(
-                        content: "The Feynman technique for learning: If you can't explain something simply, you don't understand it well enough."
-                    )
-                    entry.isFavorite = true
-                    return entry
-                }(),
-                onEdit: {},
-                onAddReflection: {},
-                onDelete: {},
-                onShare: {},
                 onToggleFavorite: {}
             )
         }
